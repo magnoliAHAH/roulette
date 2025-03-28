@@ -1,0 +1,52 @@
+body {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.app {
+  text-align: center;
+}
+
+button {
+  padding: 10px 20px;
+  font-size: 18px;
+  cursor: pointer;
+  margin-bottom: 20px;
+}
+
+.wheel-container {
+  position: relative;
+  width: 500px; /* Размер окна */
+  height: 110px; /* Высота окна */
+  overflow: hidden; /* Окно должно обрезать лишнее */
+  margin: 0 auto;
+  border: 2px solid #ccc;
+  border-radius: 10px;
+}
+
+.wheel {
+  display: flex;
+  transition: transform 0.1s ease-out;
+}
+
+.gift-item {
+  width: 100px; /* Ширина одного элемента */
+  text-align: center;
+}
+
+.gift-item img {
+  width: 80px;
+  height: 80px;
+  object-fit: cover;
+}
+
+.pointer {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 30px;
+  color: red;
+  font-weight: bold;
+}
