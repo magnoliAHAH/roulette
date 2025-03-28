@@ -26,7 +26,9 @@ function App() {
     setSpinPosition(0);
 
     try {
-      const response = await axios.get('http://localhost:8080/api/gift');
+      const apiUrl = import.meta.env.VITE_API_URL || window.location.origin;
+      const response = await axios.get(`${apiUrl}/api/gift`);
+            
       const selectedGift = response.data;
       setGift(selectedGift);
 
