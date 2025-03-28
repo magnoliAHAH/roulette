@@ -2,22 +2,21 @@ version: '3.8'
 
 services:
   frontend:
-    image: my-react-app-image  # Замените на имя вашего образа React
-    build:
-      context: ./frontend/roulette-front  # Путь к директории с вашим React приложением
-      dockerfile: Dockerfile
+    build: ./frontend/roulette-front  # Путь к фронтенд-директории
     ports:
-      - "80:80"  # Проброс порта для доступа к React приложению
+      - "80:80"  # Пробрасываем порт для доступа к фронтенду
+    networks:
+      - app-network
     depends_on:
-      - backend  # Указывает, что этот сервис зависит от backend
-    environment:
-      - VITE_API_URL=http://localhost:8080
-
+      - backend  # Указываем зависимость от бэкенда
 
   backend:
-    image: my-go-app-image  # Замените на имя вашего образа Go приложения
-    build:
-      context: ./backend  # Путь к директории с вашим Go приложением
-      dockerfile: Dockerfile
+    build: ./backend  # Путь к бэкенд-директории
     ports:
-      - "8080:8080"  # Проброс порта для доступа к Go серверу
+      - "8080:8080"  # Пробрасываем порт для доступа к API
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
