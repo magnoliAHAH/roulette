@@ -6,7 +6,8 @@ COPY nginx* /tmp
 # Установка зависимостей
 RUN apt update && apt install -y\
     libbrotli1 \
-    openssl
+    openssl \
+    certbot 
 
 # Изменение прав на пакеты
 RUN chmod 755 /tmp/nginx*
@@ -31,6 +32,12 @@ COPY supreme-roulette.work.gd.conf /etc/nginx/sites-available/supreme-roulette.w
 
 # Создаём символическую ссылку для активации сайта
 RUN ln -s /etc/nginx/sites-available/supreme-roulette.work.gd.conf /etc/nginx/sites-enabled/
+
+#CERTIFICATION
+RUN openssl dhparam -out /etc/ssl/certs/dhparam.pem 2048
+RUN mkdir -p /etc/nginx/snippets/
+COPY ssl-params.conf /etc/nginx/snippets/ssl-params.conf
+
 
 # Открываем порт 80
 EXPOSE 80
