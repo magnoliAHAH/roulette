@@ -10,8 +10,7 @@ services:
   node:
     build: ./frontend/roulette
     container_name: node-app
-    ports:
-      - "3000:3000"
+
   golang:
     build: ./backend
     container_name: calculate
