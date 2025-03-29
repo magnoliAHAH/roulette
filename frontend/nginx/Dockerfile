@@ -3,11 +3,11 @@ FROM node:18-alpine AS build
 WORKDIR /app
 
 # Копируем package.json и устанавливаем зависимости
-COPY package*.json ./
+COPY ../roulette-front/package*.json ./
 RUN npm install
 
 # Копируем весь проект
-COPY . .
+COPY ../roulette-front .
 
 # Собираем проект (например, для Vite или React)
 RUN npm run build
