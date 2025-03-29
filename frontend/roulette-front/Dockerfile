@@ -1,28 +1,32 @@
-# Этап сборки приложения
+# Этап сборки
 FROM node:18-alpine as build
 
+# Устанавливаем рабочую директорию внутри контейнера
 WORKDIR /app
 
-# Копируем package.json и package-lock.json для установки зависимостей
+# Копируем файлы зависимостей
 COPY package*.json ./
 
 # Устанавливаем зависимости
 RUN npm install
 
-# Копируем весь исходный код в контейнер
+# Копируем остальные исходники в контейнер
 COPY . .
 
-# Запускаем сборку фронтенда
+# Выполняем сборку фронтенда (если нужно)
 RUN npm run build
 
-# Этап сервера с Nginx
-FROM nginx:alpine
+# Этап запуска
+FROM node:18-alpine
 
-# Копируем собранные файлы фронтенда в папку, где Nginx ожидает статичные файлы
-COPY --from=build /app/dist /usr/share/nginx/html
+# Устанавливаем рабочую директорию для приложения
+WORKDIR /app
 
-# Открываем порты для Nginx
-EXPOSE 80
+# Копируем файлы из этапа сборки
+COPY --from=build /app .
 
-# Запускаем Nginx
-CMD ["nginx", "-g", "daemon off;"]
+# Открываем порт для Node.js приложения
+EXPOSE 3000
+
+# Запускаем сервер Node.js (предположим, что в package.json есть скрипт "start")
+CMD ["npm", "start"]

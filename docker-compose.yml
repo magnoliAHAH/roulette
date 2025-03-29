@@ -1,58 +1,19 @@
 version: '3.8'
 
 services:
-  # Сервис для Nginx
   nginx:
-    image: nginx:latest
+    build: ./frontend/nginx
     container_name: nginx-ssl
     ports:
       - "80:80"
       - "443:443"
-    volumes:
-      - /etc/letsencrypt/ssl-dhparams.pem:/etc/ssl/certs/dhparam.pem
-      - /etc/letsencrypt/live/supreme-roulette.work.gd/fullchain.pem:/etc/letsencrypt/live/supreme-roulette.work.gd/fullchain.pem
-      - /etc/letsencrypt/live/supreme-roulette.work.gd/privkey.pem:/etc/letsencrypt/live/supreme-roulette.work.gd/privkey.pem
-      - /etc/letsencrypt/live/supreme-roulette.work.gd/chain.pem:/etc/letsencrypt/live/supreme-roulette.work.gd/chain.pem
-      - ./nginx.conf:/etc/nginx/nginx.conf  # Конфиг для Nginx
-      - ./ssl-params.conf:/etc/nginx/snippets/ssl-params.conf
-      - node_dist:/usr/share/nginx/html  # Пробрасываем собранные файлы Node.js
-    restart: always
-    depends_on:
-      - node
-
-  # Сервис для сборки и работы Node.js
   node:
-    build:
-      context: ./frontend  # Путь к папке с Node.js проектом
+    build: ./frontend/roulette
     container_name: node-app
-    working_dir: /app
-    volumes:
-      - ./frontend:/app
-    command: npm run build  # Сборка вашего приложения
     ports:
-      - "3000:3000"  # Порт для Node.js
-    networks:
-      - frontend-backend
-    restart: on-failure
-
-  # Сервис для Go-сервера (если нужно)
+      - "3000:3000"
   golang:
-    build:
-      context: ./backend  # Путь к каталогу с вашим Go проектом
-    container_name: go-server
+    build: ./backend
+    container_name: calculate
     ports:
       - "8080:8080"
-    volumes:
-      - ./backend:/app
-    working_dir: /app
-    command: go run main.go  # Запуск Go-сервера
-    networks:
-      - frontend-backend
-    restart: on-failure
-
-networks:
-  frontend-backend:
-    driver: bridge
-
-volumes:
-  node_dist:  # Том для файлов Node.js
