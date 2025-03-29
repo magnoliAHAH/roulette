@@ -37,7 +37,6 @@ RUN ln -s /etc/nginx/sites-available/supreme-roulette.work.gd.conf /etc/nginx/si
 RUN mkdir -p /etc/letsencrypt/live /etc/letsencrypt/archive /etc/letsencrypt/certbot
 
 # CERTIFICATION
-RUN openssl dhparam -out /etc/ssl/certs/dhparam.pem 2048
 RUN mkdir -p /etc/nginx/snippets/
 COPY ssl-params.conf /etc/nginx/snippets/ssl-params.conf
 

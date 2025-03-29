@@ -1,22 +1,58 @@
 version: '3.8'
 
 services:
-  frontend:
-    build: ./frontend/roulette-front  # Путь к фронтенд-директории
+  # Сервис для Nginx
+  nginx:
+    image: nginx:latest
+    container_name: nginx-ssl
     ports:
-      - "80:80"  # Пробрасываем порт для доступа к фронтенду
-    networks:
-      - app-network
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /etc/letsencrypt/ssl-dhparams.pem:/etc/ssl/certs/dhparam.pem
+      - /etc/letsencrypt/live/supreme-roulette.work.gd/fullchain.pem:/etc/letsencrypt/live/supreme-roulette.work.gd/fullchain.pem
+      - /etc/letsencrypt/live/supreme-roulette.work.gd/privkey.pem:/etc/letsencrypt/live/supreme-roulette.work.gd/privkey.pem
+      - /etc/letsencrypt/live/supreme-roulette.work.gd/chain.pem:/etc/letsencrypt/live/supreme-roulette.work.gd/chain.pem
+      - ./nginx.conf:/etc/nginx/nginx.conf  # Конфиг для Nginx
+      - ./ssl-params.conf:/etc/nginx/snippets/ssl-params.conf
+      - node_dist:/usr/share/nginx/html  # Пробрасываем собранные файлы Node.js
+    restart: always
     depends_on:
-      - backend  # Указываем зависимость от бэкенда
+      - node
 
-  backend:
-    build: ./backend  # Путь к бэкенд-директории
+  # Сервис для сборки и работы Node.js
+  node:
+    build:
+      context: ./frontend  # Путь к папке с Node.js проектом
+    container_name: node-app
+    working_dir: /app
+    volumes:
+      - ./frontend:/app
+    command: npm run build  # Сборка вашего приложения
     ports:
-      - "8080:8080"  # Пробрасываем порт для доступа к API
+      - "3000:3000"  # Порт для Node.js
     networks:
-      - app-network
+      - frontend-backend
+    restart: on-failure
+
+  # Сервис для Go-сервера (если нужно)
+  golang:
+    build:
+      context: ./backend  # Путь к каталогу с вашим Go проектом
+    container_name: go-server
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./backend:/app
+    working_dir: /app
+    command: go run main.go  # Запуск Go-сервера
+    networks:
+      - frontend-backend
+    restart: on-failure
 
 networks:
-  app-network:
+  frontend-backend:
     driver: bridge
+
+volumes:
+  node_dist:  # Том для файлов Node.js
