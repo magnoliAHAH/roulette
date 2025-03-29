@@ -2,17 +2,29 @@ version: '3.8'
 
 services:
   nginx:
-    build: ./frontend/nginx
-    container_name: nginx-ssl
+    build: 
+      context: ./frontend/nginx
+      dockerfile: Dockerfile
     ports:
       - "80:80"
       - "443:443"
-  node:
-    build: ./frontend/roulette
-    container_name: node-app
+    volumes:
+      - /etc/letsencrypt/ssl-dhparams.pem:/etc/ssl/certs/dhparam.pem
+      - /etc/letsencrypt/live/supreme-roulette.work.gd/fullchain.pem:/etc/letsencrypt/live/supreme-roulette.work.gd/fullchain.pem
+      - /etc/letsencrypt/live/supreme-roulette.work.gd/privkey.pem:/etc/letsencrypt/live/supreme-roulette.work.gd/privkey.pem
+      - /etc/letsencrypt/live/supreme-roulette.work.gd/chain.pem:/etc/letsencrypt/live/supreme-roulette.work.gd/chain.pem
+    networks:
+      - app-network
 
-  golang:
-    build: ./backend
-    container_name: calculate
+  frontend:
+    build:
+      context: ./frontend/roulette-front
+      dockerfile: Dockerfile
     ports:
-      - "8080:8080"
+      - "3000:3000"
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge

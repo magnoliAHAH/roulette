@@ -1,17 +1,3 @@
-FROM node:18-alpine AS build
-
-WORKDIR /app
-
-# Копируем package.json и устанавливаем зависимости
-COPY ../roulette-front/package*.json ./
-RUN npm install
-
-# Копируем весь проект
-COPY ../roulette-front .
-
-# Собираем проект (например, для Vite или React)
-RUN npm run build
-
 FROM ubuntu:24.04
 
 # Копирование Nginx deb пакетов
@@ -37,8 +23,6 @@ COPY nginx.conf /etc/nginx/nginx.conf
 RUN chmod 755 /etc/nginx/nginx.conf
 # Создаём структуру каталогов для веб-сайта
 RUN mkdir -p /var/www/supreme-roulette.work.gd/html
-COPY --from=build /app/dist /var/www/supreme-roulette.work.gd/html
-RUN chmod 755 /var/www/supreme-roulette.work.gd/html/index.html
 # Копируем конфиг для сайта
 RUN mkdir -p /etc/nginx/sites-available/ && \
     mkdir -p /etc/nginx/sites-enabled/
