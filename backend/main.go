@@ -50,7 +50,7 @@ func initDB() {
 
 func getUserBalance(userID string) (float64, error) {
 	var balance float64
-	err := db.QueryRow("SELECT balance FROM users WHERE user_id = $1", userID).Scan(&balance)
+	err := db.QueryRow("SELECT balance FROM users WHERE telegram_id = $1", userID).Scan(&balance)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return 0, nil // Если пользователь не найден, возвращаем 0
@@ -72,7 +72,7 @@ func balanceHandler(w http.ResponseWriter, r *http.Request) {
 
 	userID := r.URL.Query().Get("user_id")
 	if userID == "" {
-		http.Error(w, "user_id is required", http.StatusBadRequest)
+		http.Error(w, "telegram_id is required", http.StatusBadRequest)
 		return
 	}
 
