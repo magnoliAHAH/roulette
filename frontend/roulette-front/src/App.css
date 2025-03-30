@@ -3,6 +3,7 @@ body {
   justify-content: center;
   align-items: center;
   background-color: #212121;
+  color: white;
 }
 
 .app {
@@ -19,7 +20,7 @@ button {
 
 .wheel-container {
   position: relative;
-  width: 400px; /* Размер окна */
+  width: 300px; /* Размер окна */
   height: 110px; /* Высота окна */
   overflow: hidden; /* Окно должно обрезать лишнее */
   margin: 0 auto;

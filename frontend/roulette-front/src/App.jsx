@@ -51,7 +51,7 @@ function App() {
     }
     
     const stopPosition = Math.floor(Math.random() * extendedGifts.length);
-    extendedGifts[21] = winningGift;
+    extendedGifts[20] = winningGift;
     return extendedGifts;
   };
 
