@@ -26,7 +26,7 @@ function App() {
     setSpinPosition(0);
 
     try {
-      const response = await axios.get(`https://https://supreme-roulette.work.gd/api/gift`);
+      const response = await axios.get(`https://supreme-roulette.work.gd/api/gift`);
             
       const selectedGift = response.data;
       setGift(selectedGift);
