@@ -1,6 +1,25 @@
 version: '3.8'
 
 services:
+  db:
+    image: postgres:latest
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: telegram_bot
+    networks:
+      - app-network
+    expose:
+      - "5432" 
+  bot:
+    build:
+      context: ./bot
+      dockerfile: Dockerfile
+    environment:
+      - DATABASE_URL=postgres://postgres:password@db:5432/telegram_bot?sslmode=disable
+    networks:
+      - app-network
+    command: ["sh", "-c", "sleep 10 && ./bot"]
   nginx:
     build: 
       context: ./frontend/nginx
