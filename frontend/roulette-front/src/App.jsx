@@ -120,6 +120,10 @@ function App() {
         <div>
           <h2>Вы выиграли: {gift.name}</h2>
           <img src={gift.image} alt={gift.name} />
+          <div className='containerPriseBtn'>
+            <button></button>
+            <button></button>
+          </div>
         </div>
       )}
     </div>
