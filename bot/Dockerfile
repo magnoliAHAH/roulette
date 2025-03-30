@@ -1,14 +1,16 @@
 # Используем официальный образ Go
-FROM golang:1.19-alpine AS builder
+FROM golang:1.24-alpine AS builder
 
 # Устанавливаем рабочую директорию в контейнере
 WORKDIR /app
 
 # Копируем исходный код в контейнер
-COPY . .
+COPY ./go* .
 
 # Загружаем зависимости Go
 RUN go mod tidy
+
+COPY . .
 
 # Собираем бинарник бота
 RUN go build -o bot .
@@ -17,13 +19,13 @@ RUN go build -o bot .
 FROM alpine:latest
 
 # Устанавливаем рабочую директорию
-WORKDIR /root/
+WORKDIR /app
 
 # Копируем скомпилированный бинарник из предыдущего контейнера
 COPY --from=builder /app/bot .
 
 # Переменная окружения для бота (можно заменить на свои настройки)
-ENV TELEGRAM_API_TOKEN=7513080511:AAFQHYyrZROaysopau2WF3Qi8NjtTj7p0q4
+ENV TELEGRAM_BOT_TOKEN=7513080511:AAFQHYyrZROaysopau2WF3Qi8NjtTj7p0q4
 
 # Открываем нужный порт (если бот работает через сетевые запросы)
 EXPOSE 8080

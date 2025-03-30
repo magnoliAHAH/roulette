@@ -7,7 +7,6 @@ import (
 	"os"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
-	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 )
 
@@ -15,10 +14,6 @@ var db *sql.DB
 
 func main() {
 	// Загружаем переменные из .env
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatal("Ошибка загрузки .env файла")
-	}
 
 	// Подключаемся к PostgreSQL
 	initDB()
