@@ -26,8 +26,7 @@ function App() {
     setSpinPosition(0);
 
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || window.location.origin;
-      const response = await axios.get(`${apiUrl}/api/gift`);
+      const response = await axios.get(`https://https://supreme-roulette.work.gd/api/gift`);
             
       const selectedGift = response.data;
       setGift(selectedGift);
