@@ -8,7 +8,7 @@ function App() {
   const [gift, setGift] = useState(null);
   const [giftsList, setGiftsList] = useState([]);
   const [spinPosition, setSpinPosition] = useState(0);
-  const [balance, setBalance] = useState(50)
+  const [balance, setBalance] = useState(0)
   const [spinCost, setSpinCost] = useState(24)
   const [userId, setUserId] = useState(null);
   const addBalance = () => {
@@ -16,10 +16,14 @@ function App() {
   };
 
   useEffect(() => {
-    if (window.Telegram && window.Telegram.WebApp) {
-      const tg = window.Telegram.WebApp;
-      tg.expand(); // Разворачивает Mini App на весь экран
-      setUserId(tg.initDataUnsafe?.user?.id || "Не найден");
+    if (window.Telegram?.WebApp?.initDataUnsafe?.user) {
+      const userId = window.Telegram.WebApp.initDataUnsafe.user.id;
+      setUserId(userId);
+
+      fetch(`https://supreme-roulette.work.gd/api/balance?user_id=${userId}`)
+        .then((res) => res.json())
+        .then((data) => setBalance(data.balance))
+        .catch((err) => console.error("Ошибка запроса:", err));
     }
   }, []);
 

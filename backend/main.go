@@ -1,10 +1,15 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
+	"fmt"
+	"log"
 	"math/rand"
 	"net/http"
 	"time"
+
+	_ "github.com/lib/pq"
 )
 
 type Gift struct {
@@ -13,6 +18,8 @@ type Gift struct {
 	Image  string  `json:"image"`
 	Chance float64 `json:"chance"`
 }
+
+var db *sql.DB
 
 var gifts = []Gift{
 	{"1", "Сердце", "/images/heart.png", 0.413},    // 41.3% шанс на подарок
@@ -23,6 +30,52 @@ var gifts = []Gift{
 	{"6", "Букет", "/images/bouquet.png", 0.0413},  // 4.13% шанс на подарок
 	{"7", "Кубок", "/images/cup.png", 0.0413},      // 4.13% шанс на подарок
 	{"8", "Алмаз", "/images/diamond.png", 0.0413},  // 4.13% шанс на подарок
+}
+
+func initDB() {
+	var err error
+	connStr := "user=postgres password=password dbname=telegram_bot sslmode=disable"
+	db, err = sql.Open("postgres", connStr)
+	if err != nil {
+		log.Fatal("Ошибка подключения к базе данных: ", err)
+	}
+}
+
+func getUserBalance(userID string) (float64, error) {
+	var balance float64
+	err := db.QueryRow("SELECT balance FROM users WHERE user_id = $1", userID).Scan(&balance)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return 0, nil // Если пользователь не найден, возвращаем 0
+		}
+		return 0, err
+	}
+	return balance, nil
+}
+
+func balanceHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "GET")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	if r.Method == http.MethodOptions {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	userID := r.URL.Query().Get("user_id")
+	if userID == "" {
+		http.Error(w, "user_id is required", http.StatusBadRequest)
+		return
+	}
+
+	balance, err := getUserBalance(userID)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Database error: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	json.NewEncoder(w).Encode(map[string]float64{"balance": balance})
 }
 
 func getRandomGift() Gift {
@@ -58,6 +111,11 @@ func giftHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	initDB()
+	defer db.Close()
+
 	http.HandleFunc("/api/gift", giftHandler)
+	http.HandleFunc("/api/balance", balanceHandler)
+
 	http.ListenAndServe(":8080", nil)
 }
