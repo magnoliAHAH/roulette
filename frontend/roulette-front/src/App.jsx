@@ -1,12 +1,19 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import './App.css';
+import { IoAddCircleOutline } from "react-icons/io5";
 
 function App() {
   const [isSpinning, setIsSpinning] = useState(false);
   const [gift, setGift] = useState(null);
   const [giftsList, setGiftsList] = useState([]);
   const [spinPosition, setSpinPosition] = useState(0);
+  const [balance, setBalance] = useState(50)
+  const [spinCost, setSpinCost] = useState(24)
+
+  const addBalance = () => {
+    setBalance(balance => balance + spinCost);
+  };
 
   const gifts = [
     { id: '1', name: 'Сердце', image: '/images/heart.png' },
@@ -21,7 +28,7 @@ function App() {
 
   const startSpin = async () => {
     if (isSpinning) return;
-
+    setBalance(balance - spinCost)
     setIsSpinning(true);
     setSpinPosition(0);
 
@@ -49,8 +56,6 @@ function App() {
     for (let i = 0; i < randomGiftCount; i++) {
       extendedGifts.push(shuffledGifts[i % shuffledGifts.length]);
     }
-    
-    const stopPosition = Math.floor(Math.random() * extendedGifts.length);
     extendedGifts[20] = winningGift;
     return extendedGifts;
   };
@@ -87,6 +92,13 @@ function App() {
   return (
     <div className="app">
       
+      <div className='upper-menu'>
+        <div className='converted-starts'>
+          <img src='/images/stars-logo.png' className='stars-image'></img>
+          <div>{balance}</div>
+          <IoAddCircleOutline size={"30px"} onClick={addBalance}/>
+        </div>
+      </div>
 
       <div className="wheel-container">
         <div className="wheel" style={{ transform: `translateX(-${spinPosition}px)` }}>
@@ -101,8 +113,8 @@ function App() {
         <div className="pointer">|</div>
       </div>
 
-
-      <button onClick={startSpin} disabled={isSpinning}>Крутить рулетку</button>
+      
+      <button onClick={startSpin} disabled={isSpinning || balance < spinCost} className='spinBtn'>{balance < spinCost ? "Недостаточный баланс" : "Крутить рулетку"}</button>
 
       {gift && !isSpinning && (
         <div>
