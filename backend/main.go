@@ -7,6 +7,7 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
+	"os"
 	"time"
 
 	_ "github.com/lib/pq"
@@ -34,11 +35,17 @@ var gifts = []Gift{
 
 func initDB() {
 	var err error
-	connStr := "user=postgres password=password dbname=telegram_bot sslmode=disable"
-	db, err = sql.Open("postgres", connStr)
+	db, err = sql.Open("postgres", os.Getenv("DATABASE_URL"))
 	if err != nil {
-		log.Fatal("Ошибка подключения к базе данных: ", err)
+		log.Fatal("Ошибка подключения к БД:", err)
 	}
+
+	err = db.Ping()
+	if err != nil {
+		log.Fatal("База недоступна:", err)
+	}
+
+	fmt.Println("✅ База данных подключена")
 }
 
 func getUserBalance(userID string) (float64, error) {
