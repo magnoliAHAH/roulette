@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import './App.css';
 import { IoAddCircleOutline } from "react-icons/io5";
@@ -10,10 +10,18 @@ function App() {
   const [spinPosition, setSpinPosition] = useState(0);
   const [balance, setBalance] = useState(50)
   const [spinCost, setSpinCost] = useState(24)
-
+  const [userId, setUserId] = useState(null);
   const addBalance = () => {
     setBalance(balance => balance + spinCost);
   };
+
+  useEffect(() => {
+    if (window.Telegram && window.Telegram.WebApp) {
+      const tg = window.Telegram.WebApp;
+      tg.expand(); // Разворачивает Mini App на весь экран
+      setUserId(tg.initDataUnsafe?.user?.id || "Не найден");
+    }
+  }, []);
 
   const gifts = [
     { id: '1', name: 'Сердце', image: '/images/heart.png' },
@@ -93,6 +101,10 @@ function App() {
     <div className="app">
       
       <div className='upper-menu'>
+        <div>
+          <h1>{userId}</h1>
+        </div>
+
         <div className='converted-starts'>
           <img src='/images/stars-logo.png' className='stars-image'></img>
           <div>{balance}</div>
