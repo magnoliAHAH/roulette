@@ -13,9 +13,28 @@ function App() {
   const [spinCost, setSpinCost] = useState(24)
   const [userId, setUserId] = useState(null);
   const [showModal, setShowModal] = useState(false);
-  const addBalance = () => {
-    setBalance(balance => balance + spinCost);
+  const addBalance = async () => {
+    try {
+      const response = await axios.post(
+        'https://supreme-roulette.work.gd/api/adjust-balance',
+        {
+          user_id: userId,
+          delta: spinCost,
+          reason: 'Manual addition'
+        },
+        {
+          headers: {
+            'X-API-Key': API_KEY,
+          }
+        }
+      );
+      
+      setBalance(response.data.new_balance);
+    } catch (error) {
+      console.error('Ошибка при добавлении баланса:', error);
+    }
   };
+
 
   useEffect(() => {
     if (window.Telegram?.WebApp?.initDataUnsafe?.user) {
@@ -49,25 +68,61 @@ function App() {
     setShowModal(false);
   };
 
-  const sellButtonHandler = () => {
-    setBalance(balance + gift.price)
-    setShowModal(false);
-  }
+  const sellButtonHandler = async () => {
+    try {
+      const response = await axios.post(
+        'https://supreme-roulette.work.gd/api/adjust-balance',
+        {
+          user_id: userId,
+          delta: gift.price,
+          reason: `Sold gift: ${gift.name}`
+        },
+        {
+          headers: {
+            'X-API-Key': API_KEY,
+          }
+        }
+      );
+      
+      setBalance(response.data.new_balance);
+      setShowModal(false);
+    } catch (error) {
+      console.error('Ошибка при продаже подарка:', error);
+    }
+  };
 
   const startSpin = async () => {
     if (isSpinning) return;
-    setBalance(balance - spinCost)
-    setIsSpinning(true);
-    setSpinPosition(0);
-    setShowModal(false);
-
+    
     try {
+      // Сначала списываем средства
+      const adjustResponse = await axios.post(
+        'https://supreme-roulette.work.gd/api/adjust-balance',
+        {
+          user_id: userId,
+          delta: -spinCost,
+          reason: 'Roulette spin'
+        },
+        {
+          headers: {
+            'X-API-Key': API_KEY,
+          }
+        }
+      );
+      
+      setBalance(adjustResponse.data.new_balance);
+      
+      setIsSpinning(true);
+      setSpinPosition(0);
+      setShowModal(false);
+
       const response = await axios.get(`https://supreme-roulette.work.gd/api/gift`, {
         headers: {
           'X-API-Key': API_KEY,
         },
-        timeout: 10000 // 10 секунд таймаут
+        timeout: 10000
       });
+      
       const selectedGift = response.data;
       setGift(selectedGift);
 
@@ -76,7 +131,7 @@ function App() {
 
       animateSpin(9);
     } catch (error) {
-      console.error('Ошибка получения подарка:', error);
+      console.error('Ошибка:', error);
       setIsSpinning(false);
     }
   };
