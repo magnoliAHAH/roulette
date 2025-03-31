@@ -63,6 +63,7 @@ services:
       - "8080:8080"
     environment:
       - DATABASE_URL=postgres://postgres:password@db:5432/telegram_bot?sslmode=disable
+      - API_SECRET=dev_5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8
     networks:
       - app-network
     depends_on:

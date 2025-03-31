@@ -21,17 +21,22 @@ type Gift struct {
 	Price  int32   `json:"price"`
 }
 
-var db *sql.DB
+var (
+	db      *sql.DB
+	apiKeys = map[string]bool{
+		os.Getenv("API_SECRET"): true, // Ключ берется из переменной окружения
+	}
+)
 
 var gifts = []Gift{
-	{"1", "Сердце", "/images/heart.png", 0.24, 15},    // 24% шанс на подарок
-	{"2", "Мишка", "/images/bear.png", 0.24, 15},      // 24% шанс на подарок
-	{"3", "Подарок", "/images/present.png", 0.14, 25}, // 14% шанс на подарок
-	{"4", "Цветок", "/images/flower.png", 0.14, 25},   // 14% шанс на подарок
-	{"5", "Торт", "/images/cake.png", 0.07, 50},       // 7% шанс на подарок
-	{"6", "Букет", "/images/bouquet.png", 0.07, 50},   // 7% шанс на подарок
-	{"7", "Кубок", "/images/cup.png", 0.035, 100},     // 3.5% шанс на подарок
-	{"8", "Алмаз", "/images/diamond.png", 0.035, 100}, // 3.5% шанс на подарок
+	{"1", "Сердце", "/images/heart.png", 0.24, 15},
+	{"2", "Мишка", "/images/bear.png", 0.24, 15},
+	{"3", "Подарок", "/images/present.png", 0.14, 25},
+	{"4", "Цветок", "/images/flower.png", 0.14, 25},
+	{"5", "Торт", "/images/cake.png", 0.07, 50},
+	{"6", "Букет", "/images/bouquet.png", 0.07, 50},
+	{"7", "Кубок", "/images/cup.png", 0.035, 100},
+	{"8", "Алмаз", "/images/diamond.png", 0.035, 100},
 }
 
 func initDB() {
@@ -49,12 +54,25 @@ func initDB() {
 	fmt.Println("✅ База данных подключена")
 }
 
+func apiKeyMiddleware(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		apiKey := r.Header.Get("X-API-Key")
+		if !apiKeys[apiKey] {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusUnauthorized)
+			json.NewEncoder(w).Encode(map[string]string{"error": "Invalid API key"})
+			return
+		}
+		next(w, r)
+	}
+}
+
 func getUserBalance(userID string) (float64, error) {
 	var balance float64
 	err := db.QueryRow("SELECT balance FROM users WHERE telegram_id = $1", userID).Scan(&balance)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return 0, nil // Если пользователь не найден, возвращаем 0
+			return 0, nil
 		}
 		return 0, err
 	}
@@ -65,7 +83,7 @@ func balanceHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Methods", "GET")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, X-API-Key")
 	if r.Method == http.MethodOptions {
 		w.WriteHeader(http.StatusOK)
 		return
@@ -101,16 +119,15 @@ func getRandomGift() Gift {
 			return g
 		}
 	}
-	return gifts[0] // fallback
+	return gifts[0]
 }
 
 func giftHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Access-Control-Allow-Origin", "*")             // Разрешить запросы с любых источников
-	w.Header().Set("Access-Control-Allow-Methods", "GET")          // Разрешить методы
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type") // Разрешить заголовки
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "GET")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, X-API-Key")
 	if r.Method == http.MethodOptions {
-		// Для предзапроса (OPTIONS) просто возвращаем 200
 		w.WriteHeader(http.StatusOK)
 		return
 	}
@@ -119,11 +136,19 @@ func giftHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	// Проверяем наличие API ключа
+	if os.Getenv("API_SECRET") == "" {
+		log.Fatal("API_SECRET environment variable must be set")
+	}
+
 	initDB()
 	defer db.Close()
 
-	http.HandleFunc("/api/gift", giftHandler)
-	http.HandleFunc("/api/balance", balanceHandler)
+	// Защищенные маршруты
+	http.HandleFunc("/api/gift", apiKeyMiddleware(giftHandler))
+	http.HandleFunc("/api/balance", apiKeyMiddleware(balanceHandler))
 
-	http.ListenAndServe(":8080", nil)
+	log.Println("Сервер запущен на http://localhost:8080")
+	log.Println("Используйте заголовок X-API-Key с вашим секретным ключом")
+	log.Fatal(http.ListenAndServe(":8080", nil))
 }
