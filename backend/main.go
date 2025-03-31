@@ -18,19 +18,20 @@ type Gift struct {
 	Name   string  `json:"name"`
 	Image  string  `json:"image"`
 	Chance float64 `json:"chance"`
+	Price  int32   `json:"price"`
 }
 
 var db *sql.DB
 
 var gifts = []Gift{
-	{"1", "Сердце", "/images/heart.png", 0.413},    // 41.3% шанс на подарок
-	{"2", "Мишка", "/images/bear.png", 0.248},      // 24.8% шанс на подарок
-	{"3", "Подарок", "/images/present.png", 0.124}, // 12.4% шанс на подарок
-	{"4", "Цветок", "/images/flower.png", 0.0413},  // 4.13% шанс на подарок
-	{"5", "Торт", "/images/cake.png", 0.0413},      // 4.13% шанс на подарок
-	{"6", "Букет", "/images/bouquet.png", 0.0413},  // 4.13% шанс на подарок
-	{"7", "Кубок", "/images/cup.png", 0.0413},      // 4.13% шанс на подарок
-	{"8", "Алмаз", "/images/diamond.png", 0.0413},  // 4.13% шанс на подарок
+	{"1", "Сердце", "/images/heart.png", 0.24, 15},    // 24% шанс на подарок
+	{"2", "Мишка", "/images/bear.png", 0.24, 15},      // 24% шанс на подарок
+	{"3", "Подарок", "/images/present.png", 0.14, 25}, // 14% шанс на подарок
+	{"4", "Цветок", "/images/flower.png", 0.14, 25},   // 14% шанс на подарок
+	{"5", "Торт", "/images/cake.png", 0.07, 50},       // 7% шанс на подарок
+	{"6", "Букет", "/images/bouquet.png", 0.07, 50},   // 7% шанс на подарок
+	{"7", "Кубок", "/images/cup.png", 0.035, 100},     // 3.5% шанс на подарок
+	{"8", "Алмаз", "/images/diamond.png", 0.035, 100}, // 3.5% шанс на подарок
 }
 
 func initDB() {

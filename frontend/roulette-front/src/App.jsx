@@ -11,6 +11,7 @@ function App() {
   const [balance, setBalance] = useState(0)
   const [spinCost, setSpinCost] = useState(24)
   const [userId, setUserId] = useState(null);
+  const [showModal, setShowModal] = useState(false);
   const addBalance = () => {
     setBalance(balance => balance + spinCost);
   };
@@ -28,21 +29,30 @@ function App() {
   }, []);
 
   const gifts = [
-    { id: '1', name: 'Сердце', image: '/images/heart.png' },
-    { id: '2', name: 'Мишка', image: '/images/bear.png' },
-    { id: '3', name: 'Подарок', image: '/images/present.png' },
-    { id: '4', name: 'Цветок', image: '/images/flower.png' },
-    { id: '5', name: 'Торт', image: '/images/cake.png' },
-    { id: '6', name: 'Букет', image: '/images/bouquet.png' },
-    { id: '7', name: 'Кубок', image: '/images/cup.png' },
-    { id: '8', name: 'Алмаз', image: '/images/diamond.png' }
+    { id: '1', name: 'Сердце', image: '/images/heart.png', price: '15' },
+    { id: '2', name: 'Мишка', image: '/images/bear.png', price: '15' },
+    { id: '3', name: 'Подарок', image: '/images/present.png', price: '25' },
+    { id: '4', name: 'Цветок', image: '/images/flower.png', price: '25' },
+    { id: '5', name: 'Торт', image: '/images/cake.png', price: '50' },
+    { id: '6', name: 'Букет', image: '/images/bouquet.png', price: '50' },
+    { id: '7', name: 'Кубок', image: '/images/cup.png', price: '100' },
+    { id: '8', name: 'Алмаз', image: '/images/diamond.png', price: '100' }
   ];
+  const closeModal = () => {
+    setShowModal(false);
+  };
+
+  const sellButtonHandler = () => {
+    setBalance(balance + gift.price)
+    setShowModal(false);
+  }
 
   const startSpin = async () => {
     if (isSpinning) return;
     setBalance(balance - spinCost)
     setIsSpinning(true);
     setSpinPosition(0);
+    setShowModal(false);
 
     try {
       const response = await axios.get(`https://supreme-roulette.work.gd/api/gift`);
@@ -88,6 +98,7 @@ function App() {
       if (step >= steps) {
         clearInterval(spinInterval);
         setIsSpinning(false);
+        setShowModal(true);
       }
     }, 30);
   };
@@ -132,13 +143,20 @@ function App() {
       
       <button onClick={startSpin} disabled={isSpinning || balance < spinCost} className='spinBtn'>{balance < spinCost ? "Недостаточный баланс" : "Крутить рулетку"}</button>
 
-      {gift && !isSpinning && (
-        <div>
-          <h2>Вы выиграли: {gift.name}</h2>
-          <img src={gift.image} alt={gift.name} />
-          <div className='containerPriseBtn'>
-            <button></button>
-            <button></button>
+      {showModal && gift && (
+        <div className="modal-overlay">
+          <div className="modal">
+            <h2>Поздравляем!</h2>
+            <p>Вы выиграли: {gift.name}</p>
+            <img src={gift.image} alt={gift.name} />
+            <div>
+              <button onClick={sellButtonHandler} className="modal-close-btn">
+                Продать
+              </button>
+              <button onClick={closeModal} className="modal-close-btn">
+                Вывести
+              </button>
+            </div>
           </div>
         </div>
       )}
