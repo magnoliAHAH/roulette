@@ -14,6 +14,10 @@ function App() {
   const [userId, setUserId] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const addBalance = async () => {
+    if (!userId) {
+      console.error('User ID is not available');
+      return;
+    }
     try {
       const response = await axios.post(
         'https://supreme-roulette.work.gd/api/adjust-balance',
@@ -182,9 +186,6 @@ function App() {
     <div className="app">
       
       <div className='upper-menu'>
-        <div>
-          <h1>{userId}</h1>
-        </div>
 
         <div className='converted-starts'>
           <img src='/images/stars-logo.png' className='stars-image'></img>
