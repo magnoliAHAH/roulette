@@ -4,6 +4,7 @@ import './App.css';
 import { IoAddCircleOutline } from "react-icons/io5";
 
 function App() {
+  const API_KEY = "dev_5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8"
   const [isSpinning, setIsSpinning] = useState(false);
   const [gift, setGift] = useState(null);
   const [giftsList, setGiftsList] = useState([]);
@@ -21,7 +22,13 @@ function App() {
       const userId = window.Telegram.WebApp.initDataUnsafe.user.id;
       setUserId(userId);
 
-      fetch(`https://supreme-roulette.work.gd/api/balance?user_id=${userId}`)
+      fetch(`https://supreme-roulette.work.gd/api/balance?user_id=${userId}`, 
+        {
+          headers: {
+            'X-API-Key': API_KEY,
+          }
+        }
+      )
         .then((res) => res.json())
         .then((data) => setBalance(data.balance))
         .catch((err) => console.error("Ошибка запроса:", err));
@@ -55,8 +62,12 @@ function App() {
     setShowModal(false);
 
     try {
-      const response = await axios.get(`https://supreme-roulette.work.gd/api/gift`);
-            
+      const response = await axios.get(`https://supreme-roulette.work.gd/api/gift`, {
+        headers: {
+          'X-API-Key': API_KEY,
+        },
+        timeout: 10000 // 10 секунд таймаут
+      });
       const selectedGift = response.data;
       setGift(selectedGift);
 
