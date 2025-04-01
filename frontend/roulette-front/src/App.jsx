@@ -59,7 +59,11 @@ function App() {
 
   const startSpin = async () => {
     if (isSpinning) return;
-    
+    setBalance(balance - spinCost)
+    setIsSpinning(true);
+    setSpinPosition(0);
+    setShowModal(false);
+
     try {
       const response = await axios.get(`https://supreme-roulette.work.gd/api/gift`, {
         headers: {
@@ -67,7 +71,7 @@ function App() {
         },
         timeout: 10000
       });
-      
+            
       const selectedGift = response.data;
       setGift(selectedGift);
 
@@ -76,7 +80,7 @@ function App() {
 
       animateSpin(9);
     } catch (error) {
-      console.error('Ошибка:', error);
+      console.error('Ошибка получения подарка:', error);
       setIsSpinning(false);
     }
   };
