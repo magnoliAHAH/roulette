@@ -63,11 +63,11 @@ function App() {
 
     try {
       const adjastRespons = await axios.post(
-        'https://supreme-roulette.work.gd/api/balance', // Укажите правильный URL
+        'https://supreme-roulette.work.gd/api/adjust-balance', // Укажите правильный URL
         {
-          user_id: userId,
-          delta: spinCost,
-          reason: "Spin"
+          user_id: 683198144,
+          delta: -1,
+          reason: "Manual addition"
         },
         {
           headers: {
@@ -76,7 +76,9 @@ function App() {
           timeout: 10000
         }
       );
-      setBalance(adjastRespons.new_balance)
+      const adjustAnswer = adjastRespons.data;
+
+      setBalance(adjustAnswer.new_balance)
 
 
       const response = await axios.get(`https://supreme-roulette.work.gd/api/gift`, {
