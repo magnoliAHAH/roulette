@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"strconv"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	_ "github.com/lib/pq"
@@ -104,7 +103,18 @@ func handleMessage(bot *tgbotapi.BotAPI, msg *tgbotapi.Message) {
 			bot.Send(tgbotapi.NewMessage(chatID, "❌ Недостаточно монет для вывода подарка."))
 		}
 	case "/buy":
-		sendStarsInvoice(bot, msg.Chat.ID) // Отправляем инвойс с кнопкой оплаты
+		// Отправляем кнопку для Stars
+		btn := tgbotapi.NewInlineKeyboardMarkup(
+			tgbotapi.NewInlineKeyboardRow(
+				tgbotapi.NewInlineKeyboardButtonData("Оплатить 1 ⭐", "pay_with_stars"),
+			),
+		)
+
+		reply := tgbotapi.NewMessage(chatID, "Нажмите кнопку для оплаты 1 звездой:")
+		reply.ReplyMarkup = btn
+		bot.Send(reply)
+
+		// ... остальные команды
 	}
 }
 
@@ -151,53 +161,6 @@ func withdrawGift(telegramID int64, cost int) bool {
 }
 
 // обработка платежей
-func paymentKeyboard() tgbotapi.InlineKeyboardMarkup {
-	button := tgbotapi.InlineKeyboardButton{
-		Text: "Оплатить 1 ⭐️",
-		Pay:  true,
-	}
-	keyboard := tgbotapi.NewInlineKeyboardMarkup(
-		tgbotapi.NewInlineKeyboardRow(button),
-	)
-	return keyboard
-}
-
-func sendStarsInvoice(bot *tgbotapi.BotAPI, chatID int64) error {
-	// 1. Настройка цен (1 звезда = 100 единиц)
-	prices := []tgbotapi.LabeledPrice{
-		{
-			Label:  "Крутить рулетку",
-			Amount: 100, // Минимальная сумма (1 звезда)
-		},
-	}
-
-	// 2. Создаем конфигурацию инвойса
-	invoice := tgbotapi.InvoiceConfig{
-		BaseChat: tgbotapi.BaseChat{
-			ChatID: chatID,
-		},
-		Title:               "Крутить рулетку (1 звезда)",
-		Description:         "Платеж через Telegram Stars",
-		Payload:             "unique_payload_" + strconv.FormatInt(chatID, 10),
-		ProviderToken:       "", // Пусто для Stars
-		Currency:            "XTR",
-		Prices:              prices,
-		SuggestedTipAmounts: []int{100}, // Чаевые (1 звезда)
-		MaxTipAmount:        100000,     // Максимальные чаевые (1000 звезда)
-		NeedName:            false,
-		NeedPhoneNumber:     false,
-		NeedEmail:           false,
-		NeedShippingAddress: false,
-		IsFlexible:          false,
-	}
-
-	// 3. Отправка инвойса
-	_, err := bot.Send(invoice)
-	if err != nil {
-		return fmt.Errorf("ошибка отправки инвойса: %v", err)
-	}
-	return nil
-}
 
 func preCheckoutQueryHandler(bot *tgbotapi.BotAPI, update tgbotapi.Update) {
 	preCheckoutQuery := update.PreCheckoutQuery
@@ -224,4 +187,28 @@ func handleSuccessfulPayment(bot *tgbotapi.BotAPI, message *tgbotapi.Message) {
 		msg := tgbotapi.NewMessage(chatID, "Ваш платеж успешно получен. Спасибо за участие!")
 		bot.Send(msg)
 	}
+}
+
+func handleCallback(bot *tgbotapi.BotAPI, update tgbotapi.Update) {
+	if update.CallbackQuery == nil {
+		return
+	}
+
+	data := update.CallbackQuery.Data
+	chatID := update.CallbackQuery.Message.Chat.ID
+
+	if data == "pay_with_stars" {
+		// Обработка оплаты Stars
+		handleStarsPayment(bot, chatID)
+	}
+
+	bot.Request(tgbotapi.NewCallback(update.CallbackQuery.ID, ""))
+}
+
+func handleStarsPayment(bot *tgbotapi.BotAPI, chatID int64) {
+	// 1. Начисляем бонус
+	addBalance(chatID, 1) // 1 попытка за 1 звезду
+
+	// 2. Уведомляем пользователя
+	bot.Send(tgbotapi.NewMessage(chatID, "✅ Оплата прошла! Ваш баланс пополнен."))
 }
