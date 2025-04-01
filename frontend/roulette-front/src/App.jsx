@@ -55,45 +55,49 @@ function App() {
   }
 
   const startSpin = async () => {
-    if (isSpinning) return;
-
+    if (isSpinning || balance < spinCost) return;
+  
+    const prevBalance = balance; // Сохраняем для отката
     setIsSpinning(true);
     setSpinPosition(0);
     setShowModal(false);
-
+  
     try {
-      const adjustRespons = await axios.post(
-        'https://supreme-roulette.work.gd/api/adjust-balance', // Укажите правильный URL
+      // 1. Сначала списываем средства через API
+      const adjustResponse = await axios.post(
+        'https://supreme-roulette.work.gd/api/adjust-balance',
         {
-          user_id: "683198144",
-          delta: -1,
-          reason: "Manual addition"
+          user_id: userId, // Используем актуальный ID
+          delta: -spinCost, // Списываем полную стоимость
+          reason: "Roulette spin"
         },
         {
-          headers: {
-            'X-API-Key': API_KEY,
-          },
+          headers: { 'X-API-Key': API_KEY },
           timeout: 10000
         }
       );
-      setBalance(adjustRespons.data.new_balance);
-
-
+  
+      // 2. Проверяем успешность операции
+      if (!adjustResponse.data?.success) {
+        throw new Error('Balance adjustment failed');
+      }
+  
+      // 3. Обновляем баланс ТОЛЬКО после успешного ответа
+      setBalance(adjustResponse.data.new_balance);
+  
+      // 4. Получаем подарок
       const response = await axios.get(`https://supreme-roulette.work.gd/api/gift`, {
-        headers: {
-          'X-API-Key': API_KEY,
-        },
-        timeout: 10000 // 10 секунд таймаут
+        headers: { 'X-API-Key': API_KEY },
+        timeout: 10000
       });
-      const selectedGift = response.data;
-      setGift(selectedGift);
-
-      const extendedGifts = generateGiftSequence(selectedGift);
-      setGiftsList(extendedGifts);
-
+      
+      setGift(response.data);
+      setGiftsList(generateGiftSequence(response.data));
       animateSpin(9);
+  
     } catch (error) {
-      console.error('Ошибка получения подарка:', error);
+      console.error('Ошибка:', error);
+      setBalance(prevBalance); // Откатываем при ошибке
       setIsSpinning(false);
     }
   };
