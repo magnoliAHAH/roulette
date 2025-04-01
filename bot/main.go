@@ -13,42 +13,39 @@ import (
 )
 
 var (
-	db  *sql.DB
 	bot *tgbotapi.BotAPI
+	db  *sql.DB
 )
 
 func main() {
-	// Подключаемся к PostgreSQL
-	initDB()
-	defer db.Close()
-
-	// Создаём таблицу, если её нет
-	createTable()
-
-	// Создаём бота
+	// Инициализация бота
 	botToken := os.Getenv("TELEGRAM_BOT_TOKEN")
 	var err error
 	bot, err = tgbotapi.NewBotAPI(botToken)
 	if err != nil {
-		log.Fatal("Ошибка при создании бота:", err)
+		log.Fatal(err)
 	}
 
-	// Запуск слушателя сообщений
+	// Подключение к БД и создание таблиц
+	initDB()
+	defer db.Close()
+
+	// Обработчик обновлений
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 60
 	updates := bot.GetUpdatesChan(u)
 
-	fmt.Println("🤖 Бот запущен!")
+	log.Println("Бот запущен и ожидает сообщений...")
 
 	for update := range updates {
 		if update.Message != nil {
 			handleMessage(update.Message)
-		} else if update.CallbackQuery != nil {
-			handleCallback(update.CallbackQuery)
 		} else if update.PreCheckoutQuery != nil {
 			handlePreCheckout(update.PreCheckoutQuery)
 		} else if update.Message != nil && update.Message.SuccessfulPayment != nil {
 			handleSuccessfulPayment(update.Message)
+		} else if update.CallbackQuery != nil {
+			handleCallback(update.CallbackQuery)
 		}
 	}
 }
@@ -57,175 +54,169 @@ func initDB() {
 	var err error
 	db, err = sql.Open("postgres", os.Getenv("DATABASE_URL"))
 	if err != nil {
-		log.Fatal("Ошибка подключения к БД:", err)
+		log.Fatal(err)
 	}
 
-	err = db.Ping()
+	// Создаем необходимые таблицы
+	_, err = db.Exec(`
+		CREATE TABLE IF NOT EXISTS users (
+			id SERIAL PRIMARY KEY,
+			telegram_id BIGINT UNIQUE NOT NULL,
+			balance INT DEFAULT 0,
+			created_at TIMESTAMP DEFAULT NOW()
+		);
+		
+		CREATE TABLE IF NOT EXISTS payments (
+			id SERIAL PRIMARY KEY,
+			user_id BIGINT REFERENCES users(telegram_id),
+			amount INT NOT NULL,
+			payment_id TEXT NOT NULL UNIQUE,
+			created_at TIMESTAMP DEFAULT NOW()
+		);
+	`)
 	if err != nil {
-		log.Fatal("База недоступна:", err)
+		log.Fatal("Ошибка создания таблиц:", err)
 	}
-	fmt.Println("✅ База данных подключена")
-}
-
-func createTable() {
-	query := `
-	CREATE TABLE IF NOT EXISTS users (
-		id SERIAL PRIMARY KEY,
-		telegram_id BIGINT UNIQUE NOT NULL,
-		balance INT DEFAULT 100
-	);`
-	_, err := db.Exec(query)
-	if err != nil {
-		log.Fatal("Ошибка создания таблицы:", err)
-	}
-	fmt.Println("✅ Таблица users создана")
 }
 
 func handleMessage(msg *tgbotapi.Message) {
-	chatID := msg.Chat.ID
-	addUser(chatID)
-
 	switch {
 	case msg.IsCommand() && msg.Command() == "start":
-		bot.Send(tgbotapi.NewMessage(chatID, "Привет! Используй /balance, /add_balance /buy или /withdraw_gift."))
-	case msg.IsCommand() && msg.Command() == "balance":
-		balance := getBalance(chatID)
-		bot.Send(tgbotapi.NewMessage(chatID, fmt.Sprintf("💰 Ваш баланс: %d монет.", balance)))
-	case msg.IsCommand() && msg.Command() == "add_balance":
-		addBalance(chatID, 50)
-		balance := getBalance(chatID)
-		bot.Send(tgbotapi.NewMessage(chatID, fmt.Sprintf("✅ Баланс пополнен! Новый баланс: %d монет.", balance)))
-	case msg.IsCommand() && msg.Command() == "withdraw_gift":
-		if withdrawGift(chatID, 200) {
-			bot.Send(tgbotapi.NewMessage(chatID, "🎁 Вы успешно вывели подарок!"))
-		} else {
-			bot.Send(tgbotapi.NewMessage(chatID, "❌ Недостаточно монет для вывода подарка."))
-		}
+		handleStart(msg)
 	case msg.IsCommand() && msg.Command() == "buy":
-		sendStarsRequest(chatID)
-	case msg.Text == "Поддержать проект":
-		sendStarsRequest(chatID)
-	default:
-		if starsAmount, err := strconv.Atoi(msg.Text); err == nil {
-			processStarsAmount(msg.Chat.ID, starsAmount)
-		}
+		showBuyOptions(msg.Chat.ID)
+	case msg.Text == "Купить Stars":
+		showBuyOptions(msg.Chat.ID)
 	}
 }
 
-func sendStarsRequest(chatID int64) {
-	msg := tgbotapi.NewMessage(chatID, "Введите количество ⭐ для оплаты:")
+func handleStart(msg *tgbotapi.Message) {
+	// Регистрируем пользователя, если его нет
+	_, err := db.Exec(`
+		INSERT INTO users (telegram_id) 
+		VALUES ($1) 
+		ON CONFLICT (telegram_id) DO NOTHING`,
+		msg.From.ID,
+	)
+	if err != nil {
+		log.Println("Ошибка регистрации пользователя:", err)
+	}
+
+	// Приветственное сообщение
+	text := `👋 Добро пожаловать! 
+Вы можете купить Stars для использования в боте.
+Нажмите "Купить Stars" или используйте команду /buy`
+
+	reply := tgbotapi.NewMessage(msg.Chat.ID, text)
+	reply.ReplyMarkup = tgbotapi.NewReplyKeyboard(
+		tgbotapi.NewKeyboardButtonRow(
+			tgbotapi.NewKeyboardButton("Купить Stars"),
+		),
+	)
+	bot.Send(reply)
+}
+
+func showBuyOptions(chatID int64) {
+	msg := tgbotapi.NewMessage(chatID, "Выберите количество Stars:")
+	msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(
+		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonData("100 Stars (1$)", "buy:100"),
+			tgbotapi.NewInlineKeyboardButtonData("500 Stars (5$)", "buy:500"),
+		),
+	)
 	bot.Send(msg)
 }
 
-func processStarsAmount(chatID int64, starsAmount int) {
-	if starsAmount <= 0 {
-		bot.Send(tgbotapi.NewMessage(chatID, "Пожалуйста, введите положительное число."))
-		return
+func handleCallback(query *tgbotapi.CallbackQuery) {
+	if query.Data[:4] == "buy:" {
+		starsAmount, err := strconv.Atoi(query.Data[4:])
+		if err != nil {
+			log.Println("Ошибка парсинга количества Stars:", err)
+			return
+		}
+
+		// Отправляем инвойс
+		if err := sendStarsInvoice(query.Message.Chat.ID, starsAmount); err != nil {
+			log.Println("Ошибка отправки инвойса:", err)
+			bot.Send(tgbotapi.NewMessage(query.Message.Chat.ID, "Ошибка создания платежа. Попробуйте позже."))
+		}
+
+		// Ответим на callback, чтобы убрать "часики" у кнопки
+		callback := tgbotapi.NewCallback(query.ID, "")
+		if _, err := bot.Request(callback); err != nil {
+			log.Println("Ошибка ответа на callback:", err)
+		}
+	}
+}
+
+func sendStarsInvoice(chatID int64, starsAmount int) error {
+	// Минимальная сумма - 1 звезда (100 единиц)
+	if starsAmount < 1 {
+		return fmt.Errorf("количество Stars должно быть положительным")
 	}
 
-	// Создаем инвойс для Stars
-	prices := []tgbotapi.LabeledPrice{
-		{Label: "Поддержка проекта", Amount: starsAmount * 100}, // 1 звезда = 100 единиц
-	}
+	amount := starsAmount * 100 // 1 звезда = 100 единиц
 
 	invoice := tgbotapi.InvoiceConfig{
 		BaseChat:      tgbotapi.BaseChat{ChatID: chatID},
-		Title:         fmt.Sprintf("Поддержка проекта (%d ⭐)", starsAmount),
-		Description:   "Спасибо за вашу поддержку!",
-		Payload:       "donation_" + strconv.FormatInt(chatID, 10) + "_" + strconv.FormatInt(time.Now().Unix(), 10),
-		ProviderToken: "",
-		Currency:      "XTR",
-		Prices:        prices,
+		Title:         fmt.Sprintf("Покупка %d Stars", starsAmount),
+		Description:   "Цифровой товар - виртуальная валюта для использования в боте",
+		Payload:       fmt.Sprintf("stars_purchase_%d_%d", chatID, time.Now().Unix()),
+		ProviderToken: "",    // Пусто для цифровых товаров
+		Currency:      "XTR", // Фиксированная валюта для Stars
+		Prices: []tgbotapi.LabeledPrice{
+			{
+				Label:  fmt.Sprintf("%d Telegram Stars", starsAmount),
+				Amount: amount,
+			},
+		},
 	}
 
-	// Добавляем кнопку оплаты
-	btn := tgbotapi.NewInlineKeyboardMarkup(
-		tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData(
-				fmt.Sprintf("Оплатить %d ⭐", starsAmount),
-				"pay_stars",
-			),
-		),
-	)
-	invoice.ReplyMarkup = btn
-
-	if _, err := bot.Send(invoice); err != nil {
-		log.Printf("Ошибка отправки инвойса: %v", err)
-		bot.Send(tgbotapi.NewMessage(chatID, "Ошибка при создании платежа"))
-	}
-}
-
-func handleCallback(query *tgbotapi.CallbackQuery) {
-	if query.Data == "pay_stars" {
-		sendStarsRequest(query.Message.Chat.ID)
-	}
-
-	// Ответ на callback-запрос
-	callbackCfg := tgbotapi.CallbackConfig{
-		CallbackQueryID: query.ID,
-	}
-	if _, err := bot.Request(callbackCfg); err != nil {
-		log.Println("Ошибка ответа на callback:", err)
-	}
+	_, err := bot.Send(invoice)
+	return err
 }
 
 func handlePreCheckout(query *tgbotapi.PreCheckoutQuery) {
+	// В реальном приложении здесь можно добавить дополнительные проверки
 	_, err := bot.Request(tgbotapi.PreCheckoutConfig{
 		PreCheckoutQueryID: query.ID,
 		OK:                 true,
 	})
 	if err != nil {
-		log.Println("PreCheckout error:", err)
+		log.Println("Ошибка подтверждения платежа:", err)
 	}
 }
 
 func handleSuccessfulPayment(msg *tgbotapi.Message) {
-	if msg.SuccessfulPayment == nil {
-		return
+	// Получаем данные о платеже
+	payment := msg.SuccessfulPayment
+	starsAmount := payment.TotalAmount / 100 // Конвертируем обратно в Stars
+
+	// Сохраняем платеж в БД
+	_, err := db.Exec(`
+		INSERT INTO payments (user_id, amount, payment_id)
+		VALUES ($1, $2, $3)`,
+		msg.From.ID,
+		starsAmount,
+		payment.TelegramPaymentChargeID,
+	)
+	if err != nil {
+		log.Println("Ошибка сохранения платежа:", err)
 	}
 
-	starsReceived := msg.SuccessfulPayment.TotalAmount / 100
-	addBalance(msg.Chat.ID, starsReceived)
+	// Обновляем баланс пользователя
+	_, err = db.Exec(`
+		UPDATE users 
+		SET balance = balance + $1 
+		WHERE telegram_id = $2`,
+		starsAmount,
+		msg.From.ID,
+	)
+	if err != nil {
+		log.Println("Ошибка обновления баланса:", err)
+	}
 
-	reply := fmt.Sprintf("✅ Получено %d звёзд! Спасибо за поддержку!", starsReceived)
+	// Отправляем подтверждение пользователю
+	reply := fmt.Sprintf("🎉 Спасибо за покупку! Ваш баланс пополнен на %d Stars.", starsAmount)
 	bot.Send(tgbotapi.NewMessage(msg.Chat.ID, reply))
-}
-
-// Функции работы с БД
-func addUser(telegramID int64) {
-	_, err := db.Exec("INSERT INTO users (telegram_id) VALUES ($1) ON CONFLICT DO NOTHING", telegramID)
-	if err != nil {
-		log.Println("Ошибка при добавлении пользователя:", err)
-	}
-}
-
-func getBalance(telegramID int64) int {
-	var balance int
-	err := db.QueryRow("SELECT balance FROM users WHERE telegram_id = $1", telegramID).Scan(&balance)
-	if err != nil {
-		log.Println("Ошибка при получении баланса:", err)
-		return 0
-	}
-	return balance
-}
-
-func addBalance(telegramID int64, amount int) {
-	_, err := db.Exec("UPDATE users SET balance = balance + $1 WHERE telegram_id = $2", amount, telegramID)
-	if err != nil {
-		log.Println("Ошибка при обновлении баланса:", err)
-	}
-}
-
-func withdrawGift(telegramID int64, cost int) bool {
-	balance := getBalance(telegramID)
-	if balance < cost {
-		return false
-	}
-
-	_, err := db.Exec("UPDATE users SET balance = balance - $1 WHERE telegram_id = $2", cost, telegramID)
-	if err != nil {
-		log.Println("Ошибка при снятии баланса:", err)
-		return false
-	}
-	return true
 }
