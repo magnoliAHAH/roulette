@@ -39,6 +39,10 @@ func main() {
 	for update := range updates {
 		if update.Message != nil {
 			handleMessage(bot, update.Message)
+		} else if update.PreCheckoutQuery != nil {
+			preCheckoutQueryHandler(bot, update) // Обрабатываем запрос на оплату
+		} else if update.Message != nil && update.Message.SuccessfulPayment != nil {
+			handleSuccessfulPayment(bot, update.Message) // Обрабатываем успешный платеж
 		}
 	}
 }
@@ -141,4 +145,66 @@ func withdrawGift(telegramID int64, cost int) bool {
 		return false
 	}
 	return true
+}
+
+// обработка платежей
+func paymentKeyboard() tgbotapi.InlineKeyboardMarkup {
+	button := tgbotapi.InlineKeyboardButton{
+		Text: "Оплатить 1 ⭐️",
+		Pay:  true,
+	}
+	keyboard := tgbotapi.NewInlineKeyboardMarkup(
+		tgbotapi.NewInlineKeyboardRow(button),
+	)
+	return keyboard
+}
+
+func sendInvoice(bot *tgbotapi.BotAPI, chatID int64) {
+	prices := []tgbotapi.LabeledPrice{
+		{
+			Label:  "Участие в рулетке",
+			Amount: 100, // 10 Stars (значение в центах)
+		},
+	}
+
+	invoice := tgbotapi.NewInvoice(
+		chatID,
+		"Участие в рулетке",
+		"Оплата за участие в игре 'Рулетка'",
+		"unique_payload", // Уникальный идентификатор платежа
+		"",               // ProviderToken оставляем пустым для Telegram Stars
+		"",
+		"XTR",
+		prices,
+	)
+	invoice.ReplyMarkup = paymentKeyboard()
+
+	bot.Send(invoice)
+}
+
+func preCheckoutQueryHandler(bot *tgbotapi.BotAPI, update tgbotapi.Update) {
+	preCheckoutQuery := update.PreCheckoutQuery
+	if preCheckoutQuery != nil {
+		preCheckoutConfig := tgbotapi.PreCheckoutConfig{
+			PreCheckoutQueryID: preCheckoutQuery.ID,
+			OK:                 true,
+		}
+		bot.Request(preCheckoutConfig)
+	}
+}
+
+func handleSuccessfulPayment(bot *tgbotapi.BotAPI, message *tgbotapi.Message) {
+	if message.SuccessfulPayment != nil {
+		// Логика обработки успешного платежа
+		log.Printf("Платеж на сумму %d подтвержден от пользователя %s", message.SuccessfulPayment.TotalAmount, message.From.UserName)
+
+		// Допустим, начисляем баланс пользователя
+		chatID := message.Chat.ID
+		amount := message.SuccessfulPayment.TotalAmount / 100 // Переводим из центов в монеты
+		addBalance(chatID, int(amount))
+
+		// Подтверждение пользователю
+		msg := tgbotapi.NewMessage(chatID, "Ваш платеж успешно получен. Спасибо за участие!")
+		bot.Send(msg)
+	}
 }
