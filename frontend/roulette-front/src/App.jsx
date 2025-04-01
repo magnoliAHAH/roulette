@@ -116,7 +116,7 @@ function App() {
       console.log('Balance adjusted:', adjustResponse.data);
   
       // 4. Обновляем баланс на фронтенде
-      setBalance(prevBalance + gift.price); // Списываем 1 единицу, как в API
+      setBalance(prevBalance + gift.price); 
   
     } catch (error) {
       console.error('Error in Selling:', error);
@@ -164,7 +164,7 @@ function App() {
       console.log('Balance adjusted:', adjustResponse.data);
   
       // 4. Обновляем баланс на фронтенде
-      setBalance(prevBalance - 1); // Списываем 1 единицу, как в API
+      setBalance(prevBalance - spinCost); // Списываем 1 единицу, как в API
   
       // 5. Получаем подарок
       const giftResponse = await axios.get(
