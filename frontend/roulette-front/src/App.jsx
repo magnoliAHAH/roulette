@@ -14,29 +14,7 @@ function App() {
   const [userId, setUserId] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const addBalance = async () => {
-    if (!userId) {
-      console.error('User ID is not available');
-      return;
-    }
-    try {
-      const response = await axios.post(
-        'https://supreme-roulette.work.gd/api/adjust-balance',
-        {
-          user_id: userId,
-          delta: spinCost,
-          reason: 'Manual addition'
-        },
-        {
-          headers: {
-            'X-API-Key': API_KEY,
-          }
-        }
-      );
-      
-      setBalance(response.data.new_balance);
-    } catch (error) {
-      console.error('Ошибка при добавлении баланса:', error);
-    }
+      setBalance(balance + gift.price);
   };
 
 
@@ -98,23 +76,8 @@ function App() {
   const startSpin = async () => {
     if (isSpinning) return;
     
-    try {
-      // Сначала списываем средства
-      const adjustResponse = await axios.post(
-        'https://supreme-roulette.work.gd/api/adjust-balance',
-        {
-          user_id: userId,
-          delta: -spinCost,
-          reason: 'Roulette spin'
-        },
-        {
-          headers: {
-            'X-API-Key': API_KEY,
-          }
-        }
-      );
       
-      setBalance(adjustResponse.data.new_balance);
+      setBalance(balance - spinCost);
       
       setIsSpinning(true);
       setSpinPosition(0);
@@ -134,10 +97,7 @@ function App() {
       setGiftsList(extendedGifts);
 
       animateSpin(9);
-    } catch (error) {
-      console.error('Ошибка:', error);
-      setIsSpinning(false);
-    }
+
   };
 
   const generateGiftSequence = (winningGift) => {
