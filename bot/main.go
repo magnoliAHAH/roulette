@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	_ "github.com/lib/pq"
@@ -84,96 +85,79 @@ func handleMessage(msg *tgbotapi.Message) {
 	chatID := msg.Chat.ID
 	addUser(chatID)
 
-	switch msg.Text {
-	case "/start":
+	switch {
+	case msg.IsCommand() && msg.Command() == "start":
 		bot.Send(tgbotapi.NewMessage(chatID, "Привет! Используй /balance, /add_balance /buy или /withdraw_gift."))
-	case "/balance":
+	case msg.IsCommand() && msg.Command() == "balance":
 		balance := getBalance(chatID)
 		bot.Send(tgbotapi.NewMessage(chatID, fmt.Sprintf("💰 Ваш баланс: %d монет.", balance)))
-	case "/add_balance":
+	case msg.IsCommand() && msg.Command() == "add_balance":
 		addBalance(chatID, 50)
 		balance := getBalance(chatID)
 		bot.Send(tgbotapi.NewMessage(chatID, fmt.Sprintf("✅ Баланс пополнен! Новый баланс: %d монет.", balance)))
-	case "/withdraw_gift":
+	case msg.IsCommand() && msg.Command() == "withdraw_gift":
 		if withdrawGift(chatID, 200) {
 			bot.Send(tgbotapi.NewMessage(chatID, "🎁 Вы успешно вывели подарок!"))
 		} else {
 			bot.Send(tgbotapi.NewMessage(chatID, "❌ Недостаточно монет для вывода подарка."))
 		}
-	case "/buy":
-		sendStarsInvoice(chatID)
-	case "Поддержать проект":
-		bot.Send(tgbotapi.NewMessage(chatID, "Введите количество ⭐ для оплаты:"))
+	case msg.IsCommand() && msg.Command() == "buy":
+		sendStarsRequest(chatID)
+	case msg.Text == "Поддержать проект":
+		sendStarsRequest(chatID)
 	default:
-		if _, err := strconv.Atoi(msg.Text); err == nil {
-			processStarsAmount(msg)
+		if starsAmount, err := strconv.Atoi(msg.Text); err == nil {
+			processStarsAmount(msg.Chat.ID, starsAmount)
 		}
 	}
 }
 
-func sendStarsInvoice(chatID int64) {
-	prices := []tgbotapi.LabeledPrice{
-		{Label: "Крутить рулетку", Amount: 100}, // 1 звезда = 100 единиц
-	}
-
-	invoice := tgbotapi.InvoiceConfig{
-		BaseChat:            tgbotapi.BaseChat{ChatID: chatID},
-		Title:               "Крутить рулетку (1 звезда)",
-		Description:         "Платеж через Telegram Stars",
-		Payload:             "spin_" + strconv.FormatInt(chatID, 10),
-		ProviderToken:       "", // Пусто для Stars
-		Currency:            "XTR",
-		Prices:              prices,
-		SuggestedTipAmounts: []int{100}, // Чаевые (1 звезда)
-		MaxTipAmount:        100,        // Максимальные чаевые
-	}
-
-	if _, err := bot.Send(invoice); err != nil {
-		log.Printf("Ошибка отправки инвойса: %v", err)
-	}
+func sendStarsRequest(chatID int64) {
+	msg := tgbotapi.NewMessage(chatID, "Введите количество ⭐ для оплаты:")
+	bot.Send(msg)
 }
 
-func processStarsAmount(msg *tgbotapi.Message) {
-	starsAmount, _ := strconv.Atoi(msg.Text)
+func processStarsAmount(chatID int64, starsAmount int) {
 	if starsAmount <= 0 {
-		bot.Send(tgbotapi.NewMessage(msg.Chat.ID, "Введите положительное число"))
+		bot.Send(tgbotapi.NewMessage(chatID, "Пожалуйста, введите положительное число."))
 		return
 	}
 
+	// Создаем инвойс для Stars
 	prices := []tgbotapi.LabeledPrice{
-		{Label: "Поддержка проекта", Amount: starsAmount * 100},
+		{Label: "Поддержка проекта", Amount: starsAmount * 100}, // 1 звезда = 100 единиц
 	}
 
 	invoice := tgbotapi.InvoiceConfig{
-		BaseChat:            tgbotapi.BaseChat{ChatID: msg.Chat.ID},
-		Title:               fmt.Sprintf("Поддержка проекта (%d ⭐)", starsAmount),
-		Description:         "Спасибо за вашу поддержку!",
-		Payload:             "donation_" + strconv.FormatInt(msg.Chat.ID, 10),
-		ProviderToken:       "",
-		Currency:            "XTR",
-		Prices:              prices,
-		SuggestedTipAmounts: []int{starsAmount * 100},
-		MaxTipAmount:        starsAmount * 100,
+		BaseChat:      tgbotapi.BaseChat{ChatID: chatID},
+		Title:         fmt.Sprintf("Поддержка проекта (%d ⭐)", starsAmount),
+		Description:   "Спасибо за вашу поддержку!",
+		Payload:       "donation_" + strconv.FormatInt(chatID, 10) + "_" + strconv.FormatInt(time.Now().Unix(), 10),
+		ProviderToken: "",
+		Currency:      "XTR",
+		Prices:        prices,
 	}
+
+	// Добавляем кнопку оплаты
+	btn := tgbotapi.NewInlineKeyboardMarkup(
+		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonData(
+				fmt.Sprintf("Оплатить %d ⭐", starsAmount),
+				"pay_stars",
+			),
+		),
+	)
+	invoice.ReplyMarkup = btn
 
 	if _, err := bot.Send(invoice); err != nil {
 		log.Printf("Ошибка отправки инвойса: %v", err)
+		bot.Send(tgbotapi.NewMessage(chatID, "Ошибка при создании платежа"))
 	}
 }
 
 func handleCallback(query *tgbotapi.CallbackQuery) {
-	chatID := query.Message.Chat.ID
-
-	switch query.Data {
-	case "pay_with_stars":
-		// Обработка оплаты Stars
-		_, err := bot.Send(tgbotapi.NewMessage(chatID, "Готово! Нажмите на кнопку оплаты в появившемся сообщении."))
-		if err != nil {
-			log.Println("Ошибка отправки сообщения:", err)
-		}
-		sendStarsInvoice(chatID)
-
-		// Другие callback-действия можно добавить здесь
+	if query.Data == "pay_stars" {
+		sendStarsRequest(query.Message.Chat.ID)
 	}
 
 	// Ответ на callback-запрос
@@ -196,9 +180,15 @@ func handlePreCheckout(query *tgbotapi.PreCheckoutQuery) {
 }
 
 func handleSuccessfulPayment(msg *tgbotapi.Message) {
+	if msg.SuccessfulPayment == nil {
+		return
+	}
+
 	starsReceived := msg.SuccessfulPayment.TotalAmount / 100
 	addBalance(msg.Chat.ID, starsReceived)
-	bot.Send(tgbotapi.NewMessage(msg.Chat.ID, fmt.Sprintf("✅ Получено %d звёзд! Спасибо за поддержку!", starsReceived)))
+
+	reply := fmt.Sprintf("✅ Получено %d звёзд! Спасибо за поддержку!", starsReceived)
+	bot.Send(tgbotapi.NewMessage(msg.Chat.ID, reply))
 }
 
 // Функции работы с БД
