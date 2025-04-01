@@ -13,8 +13,9 @@ function App() {
   const [spinCost, setSpinCost] = useState(24)
   const [userId, setUserId] = useState(null);
   const [showModal, setShowModal] = useState(false);
+
   const addBalance = async () => {
-      setBalance(balance + gift.price);
+      setBalance(balance + spinCost);
   };
 
 
@@ -50,39 +51,16 @@ function App() {
     setShowModal(false);
   };
 
-  const sellButtonHandler = async () => {
-    try {
-      const response = await axios.post(
-        'https://supreme-roulette.work.gd/api/adjust-balance',
-        {
-          user_id: userId,
-          delta: gift.price,
-          reason: `Sold gift: ${gift.name}`
-        },
-        {
-          headers: {
-            'X-API-Key': API_KEY,
-          }
-        }
-      );
-      
-      setBalance(response.data.new_balance);
-      setShowModal(false);
-    } catch (error) {
-      console.error('Ошибка при продаже подарка:', error);
-    }
+  const sellButtonHandler = () => {
+    setBalance(balance - gift.price);
+    setShowModal(false);
+
   };
 
   const startSpin = async () => {
     if (isSpinning) return;
     
-      
-      setBalance(balance - spinCost);
-      
-      setIsSpinning(true);
-      setSpinPosition(0);
-      setShowModal(false);
-
+    try {
       const response = await axios.get(`https://supreme-roulette.work.gd/api/gift`, {
         headers: {
           'X-API-Key': API_KEY,
@@ -97,7 +75,10 @@ function App() {
       setGiftsList(extendedGifts);
 
       animateSpin(9);
-
+    } catch (error) {
+      console.error('Ошибка:', error);
+      setIsSpinning(false);
+    }
   };
 
   const generateGiftSequence = (winningGift) => {
