@@ -13,24 +13,16 @@ function App() {
   const [spinCost, setSpinCost] = useState(24)
   const [userId, setUserId] = useState(null);
   const [showModal, setShowModal] = useState(false);
-
-  const addBalance = async () => {
-      setBalance(balance + spinCost);
+  const addBalance = () => {
+    setBalance(balance => balance + spinCost);
   };
-
 
   useEffect(() => {
     if (window.Telegram?.WebApp?.initDataUnsafe?.user) {
       const userId = window.Telegram.WebApp.initDataUnsafe.user.id;
       setUserId(userId);
 
-      fetch(`https://supreme-roulette.work.gd/api/balance?user_id=${userId}`, 
-        {
-          headers: {
-            'X-API-Key': API_KEY,
-          }
-        }
-      )
+      fetch(`https://supreme-roulette.work.gd/api/balance?user_id=${userId}`)
         .then((res) => res.json())
         .then((data) => setBalance(data.balance))
         .catch((err) => console.error("Ошибка запроса:", err));
@@ -52,10 +44,9 @@ function App() {
   };
 
   const sellButtonHandler = () => {
-    setBalance(balance - gift.price);
+    setBalance(balance + gift.price)
     setShowModal(false);
-
-  };
+  }
 
   const startSpin = async () => {
     if (isSpinning) return;
@@ -65,11 +56,12 @@ function App() {
     setShowModal(false);
 
     try {
-      const response = await axios.get(`https://supreme-roulette.work.gd/api/gift`, {
+      // Выполняем запрос к API для получения подарка
+      const response = await axios.get('https://supreme-roulette.work.gd/api/gift', {
         headers: {
-          'X-API-Key': API_KEY,
+          'X-API-Key': API_KEY, // Убедитесь, что API_KEY действительно передан
         },
-        timeout: 10000
+        timeout: 10000, // Установка тайм-аута для запроса
       });
             
       const selectedGift = response.data;
@@ -79,6 +71,7 @@ function App() {
       setGiftsList(extendedGifts);
 
       animateSpin(9);
+      
     } catch (error) {
       console.error('Ошибка получения подарка:', error);
       setIsSpinning(false);
@@ -131,6 +124,9 @@ function App() {
     <div className="app">
       
       <div className='upper-menu'>
+        <div>
+          <h1>{userId}</h1>
+        </div>
 
         <div className='converted-starts'>
           <img src='/images/stars-logo.png' className='stars-image'></img>
@@ -177,4 +173,3 @@ function App() {
 }
 
 export default App;
-
