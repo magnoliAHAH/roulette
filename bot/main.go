@@ -6,7 +6,6 @@ import (
 	"log"
 	"os"
 	"strconv"
-	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	_ "github.com/lib/pq"
@@ -155,22 +154,18 @@ func sendStarsInvoice(chatID int64, starsAmount int) error {
 		return fmt.Errorf("количество Stars должно быть положительным")
 	}
 
-	amount := starsAmount * 100 // 1 звезда = 100 единиц
-
-	invoice := tgbotapi.InvoiceConfig{
-		BaseChat:      tgbotapi.BaseChat{ChatID: chatID},
-		Title:         fmt.Sprintf("Покупка %d Stars", starsAmount),
-		Description:   "Цифровой товар - виртуальная валюта для использования в боте",
-		Payload:       fmt.Sprintf("stars_purchase_%d_%d", chatID, time.Now().Unix()),
-		ProviderToken: "",    // Пусто для цифровых товаров
-		Currency:      "XTR", // Фиксированная валюта для Stars
-		Prices: []tgbotapi.LabeledPrice{
-			{
-				Label:  fmt.Sprintf("%d Telegram Stars", starsAmount),
-				Amount: amount,
-			},
+	invoice := tgbotapi.NewInvoice(
+		chatID,
+		"Покупка Stars",
+		"Пополнение баланса Telegram Stars",
+		"stars_payload_"+strconv.FormatInt(chatID, 10),
+		"",    // Пустой provider_token для Stars
+		"",    // start_param можно оставить пустым
+		"XTR", // Валюта Stars
+		[]tgbotapi.LabeledPrice{
+			{Label: "10 Stars", Amount: 1000}, // 100 Stars = 10000 единиц
 		},
-	}
+	)
 
 	_, err := bot.Send(invoice)
 	return err
