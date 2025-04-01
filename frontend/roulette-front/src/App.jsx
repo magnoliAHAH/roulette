@@ -22,7 +22,13 @@ function App() {
       const userId = window.Telegram.WebApp.initDataUnsafe.user.id;
       setUserId(userId);
 
-      fetch(`https://supreme-roulette.work.gd/api/balance?user_id=${userId}`)
+      fetch(`https://supreme-roulette.work.gd/api/balance?user_id=${userId}`, 
+        {
+          headers: {
+            'X-API-Key': API_KEY,
+          }
+        }
+      )
         .then((res) => res.json())
         .then((data) => setBalance(data.balance))
         .catch((err) => console.error("Ошибка запроса:", err));
@@ -50,20 +56,35 @@ function App() {
 
   const startSpin = async () => {
     if (isSpinning) return;
-    setBalance(balance - spinCost)
+
     setIsSpinning(true);
     setSpinPosition(0);
     setShowModal(false);
 
     try {
-      // Выполняем запрос к API для получения подарка
-      const response = await axios.get('https://supreme-roulette.work.gd/api/gift', {
-        headers: {
-          'X-API-Key': API_KEY, // Убедитесь, что API_KEY действительно передан
+      const adjastRespons = await axios.post(
+        'https://supreme-roulette.work.gd/api/balance', // Укажите правильный URL
+        {
+          user_id: userId,
+          delta: spinCost,
+          reason: "Spin"
         },
-        timeout: 10000, // Установка тайм-аута для запроса
+        {
+          headers: {
+            'X-API-Key': API_KEY,
+          },
+          timeout: 10000
+        }
+      );
+      setBalance(adjastRespons.new_balance)
+
+
+      const response = await axios.get(`https://supreme-roulette.work.gd/api/gift`, {
+        headers: {
+          'X-API-Key': API_KEY,
+        },
+        timeout: 10000 // 10 секунд таймаут
       });
-            
       const selectedGift = response.data;
       setGift(selectedGift);
 
@@ -71,7 +92,6 @@ function App() {
       setGiftsList(extendedGifts);
 
       animateSpin(9);
-      
     } catch (error) {
       console.error('Ошибка получения подарка:', error);
       setIsSpinning(false);
