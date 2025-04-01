@@ -13,8 +13,46 @@ function App() {
   const [spinCost, setSpinCost] = useState(24)
   const [userId, setUserId] = useState(null);
   const [showModal, setShowModal] = useState(false);
-  const addBalance = () => {
-    setBalance(balance => balance + spinCost);
+  const addBalance = async () => {
+    const prevBalance = balance;
+    try {
+      // 1. Списание баланса (точно как в работающем cURL)
+      const adjustResponse = await axios.post(
+        'https://supreme-roulette.work.gd/api/adjust-balance',
+        {
+          user_id: String(userId),
+          delta: gift.price,
+          reason: "Add by Button"
+        },
+        {
+          headers: { 
+            'X-API-Key': API_KEY,
+            'Content-Type': 'application/json'
+          },
+          timeout: 10000
+        }
+      );
+  
+      // 2. Валидация ответа
+      if (!adjustResponse.data?.success) {
+        throw new Error('Balance adjustment failed: ' + JSON.stringify(adjustResponse.data));
+      }
+  
+      // 3. Логирование для отладки
+      console.log('Balance adjusted:', adjustResponse.data);
+  
+      // 4. Обновляем баланс на фронтенде
+      setBalance(prevBalance + spinCost); // Списываем 1 единицу, как в API
+  
+    } catch (error) {
+      console.error('Error in Selling:', error);
+      setBalance(prevBalance); // Откат
+      
+      // Дополнительная диагностика
+      if (error.response) {
+        console.error('Server response:', error.response.data);
+      }
+    }
   };
 
   useEffect(() => {
@@ -50,6 +88,7 @@ function App() {
   };
 
   const sellButtonHandler = async () => {
+    const prevBalance = balance;
     try {
       // 1. Списание баланса (точно как в работающем cURL)
       const adjustResponse = await axios.post(
@@ -77,7 +116,7 @@ function App() {
       console.log('Balance adjusted:', adjustResponse.data);
   
       // 4. Обновляем баланс на фронтенде
-      setBalance(prevBalance - gift.price); // Списываем 1 единицу, как в API
+      setBalance(prevBalance + gift.price); // Списываем 1 единицу, как в API
   
     } catch (error) {
       console.error('Error in Selling:', error);
