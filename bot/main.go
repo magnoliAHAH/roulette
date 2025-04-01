@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	_ "github.com/lib/pq"
@@ -162,28 +163,28 @@ func paymentKeyboard() tgbotapi.InlineKeyboardMarkup {
 }
 
 func sendStarsInvoice(bot *tgbotapi.BotAPI, chatID int64) {
-	// 1. Создаем цену в Stars (1 звезда = 7 RUB ~0.07$)
 	prices := []tgbotapi.LabeledPrice{
 		{
-			Label:  "Участие в рулетке",
-			Amount: 100, // 1 звезда (минимальная сумма)
+			Label:  "Крутить рулетку",
+			Amount: 100, // 1 звезда = 100 единиц
 		},
 	}
 
-	// 2. Создаем инвойс для Stars
-	invoice := tgbotapi.NewInvoice(
-		chatID,
-		"Крутить рулетку (1 звезда)",
-		"Платеж через Telegram Stars",
-		"unique_stars_payload", // Уникальный ID платежа
-		"",                     // Пустой provider_token для Stars
-		"",                     // Пустой start_parameter
-		"XTR",                  // Код валюты для Telegram Stars
-		prices,
-	)
+	// Создаем инвойс с правильным форматом suggested_tip_amounts
+	invoiceConfig := tgbotapi.InvoiceConfig{
+		BaseChat: tgbotapi.BaseChat{
+			ChatID: chatID,
+		},
+		Title:               "Крутить рулетку (1 звезда)",
+		Description:         "Платеж через Telegram Stars",
+		Payload:             "unique_stars_payload_" + strconv.FormatInt(chatID, 10),
+		Currency:            "XTR",
+		Prices:              prices,
+		SuggestedTipAmounts: []int{100}, // Правильный формат
+	}
 
-	// 3. Добавляем кнопку оплаты
-	_, err := bot.Send(invoice)
+	// Отправка
+	_, err := bot.Send(invoiceConfig)
 	if err != nil {
 		log.Printf("Ошибка отправки инвойса: %v", err)
 	}
