@@ -85,7 +85,7 @@ func handleMessage(bot *tgbotapi.BotAPI, msg *tgbotapi.Message) {
 
 	switch msg.Text {
 	case "/start":
-		bot.Send(tgbotapi.NewMessage(chatID, "Привет! Используй /balance, /add_balance или /withdraw_gift."))
+		bot.Send(tgbotapi.NewMessage(chatID, "Привет! Используй /balance, /add_balance /buy или /withdraw_gift."))
 
 	case "/balance":
 		balance := getBalance(chatID)
@@ -102,6 +102,8 @@ func handleMessage(bot *tgbotapi.BotAPI, msg *tgbotapi.Message) {
 		} else {
 			bot.Send(tgbotapi.NewMessage(chatID, "❌ Недостаточно монет для вывода подарка."))
 		}
+	case "/buy":
+		sendStarsInvoice(bot, msg.Chat.ID) // Отправляем инвойс с кнопкой оплаты
 	}
 }
 
@@ -159,27 +161,32 @@ func paymentKeyboard() tgbotapi.InlineKeyboardMarkup {
 	return keyboard
 }
 
-func sendInvoice(bot *tgbotapi.BotAPI, chatID int64) {
+func sendStarsInvoice(bot *tgbotapi.BotAPI, chatID int64) {
+	// 1. Создаем цену в Stars (1 звезда = 7 RUB ~0.07$)
 	prices := []tgbotapi.LabeledPrice{
 		{
 			Label:  "Участие в рулетке",
-			Amount: 100, // 10 Stars (значение в центах)
+			Amount: 100, // 1 звезда (минимальная сумма)
 		},
 	}
 
+	// 2. Создаем инвойс для Stars
 	invoice := tgbotapi.NewInvoice(
 		chatID,
-		"Участие в рулетке",
-		"Оплата за участие в игре 'Рулетка'",
-		"unique_payload", // Уникальный идентификатор платежа
-		"",               // ProviderToken оставляем пустым для Telegram Stars
-		"",
-		"XTR",
+		"Крутить рулетку (1 звезда)",
+		"Платеж через Telegram Stars",
+		"unique_stars_payload", // Уникальный ID платежа
+		"",                     // Пустой provider_token для Stars
+		"",                     // Пустой start_parameter
+		"XTR",                  // Код валюты для Telegram Stars
 		prices,
 	)
-	invoice.ReplyMarkup = paymentKeyboard()
 
-	bot.Send(invoice)
+	// 3. Добавляем кнопку оплаты
+	_, err := bot.Send(invoice)
+	if err != nil {
+		log.Printf("Ошибка отправки инвойса: %v", err)
+	}
 }
 
 func preCheckoutQueryHandler(bot *tgbotapi.BotAPI, update tgbotapi.Update) {
