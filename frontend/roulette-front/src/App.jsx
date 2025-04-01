@@ -57,18 +57,18 @@ function App() {
   const startSpin = async () => {
     if (isSpinning || balance < spinCost) return;
   
-    const prevBalance = balance; // Для отката при ошибке
+    const prevBalance = balance;
     setIsSpinning(true);
     setShowModal(false);
   
     try {
-      // 1. Отправляем запрос на списание
+      // 1. Списание баланса (точно как в работающем cURL)
       const adjustResponse = await axios.post(
         'https://supreme-roulette.work.gd/api/adjust-balance',
         {
-          user_id: userId, // Важно: используем динамический ID!
-          delta: -spinCost, // Списываем полную стоимость
-          reason: "Roulette spin"
+          user_id: "683198144", // Пока используем хардкод, как в cURL
+          delta: -1, // Важно: именно -1, как в работающем запросе
+          reason: "Manual addition" // Точное соответствие cURL
         },
         {
           headers: { 
@@ -79,18 +79,24 @@ function App() {
         }
       );
   
-      // 2. Проверяем ответ сервера
+      // 2. Валидация ответа
       if (!adjustResponse.data?.success) {
-        throw new Error('Сервер не подтвердил списание');
+        throw new Error('Balance adjustment failed: ' + JSON.stringify(adjustResponse.data));
       }
   
-      // 3. Обновляем баланс на фронтенде
-      setBalance(adjustResponse.data.new_balance);
+      // 3. Логирование для отладки
+      console.log('Balance adjusted:', adjustResponse.data);
   
-      // 4. Запускаем рулетку
+      // 4. Обновляем баланс на фронтенде
+      setBalance(prevBalance - 1); // Списываем 1 единицу, как в API
+  
+      // 5. Получаем подарок
       const giftResponse = await axios.get(
         'https://supreme-roulette.work.gd/api/gift',
-        { headers: { 'X-API-Key': API_KEY } }
+        { 
+          headers: { 'X-API-Key': API_KEY },
+          timeout: 10000
+        }
       );
       
       setGift(giftResponse.data);
@@ -98,9 +104,14 @@ function App() {
       animateSpin(9);
   
     } catch (error) {
-      console.error('Ошибка:', error);
-      setBalance(prevBalance); // Откат баланса
+      console.error('Error in startSpin:', error);
+      setBalance(prevBalance); // Откат
       setIsSpinning(false);
+      
+      // Дополнительная диагностика
+      if (error.response) {
+        console.error('Server response:', error.response.data);
+      }
     }
   };
 
