@@ -5,6 +5,7 @@ import { IoAddCircleOutline } from "react-icons/io5";
 
 function App() {
   const API_KEY = "dev_5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8"
+  const BOT_TOKEN = "7513080511:AAFQHYyrZROaysopau2WF3Qi8NjtTj7p0q4"
   const [isSpinning, setIsSpinning] = useState(false);
   const [gift, setGift] = useState(null);
   const [giftsList, setGiftsList] = useState([]);
@@ -13,6 +14,31 @@ function App() {
   const [spinCost, setSpinCost] = useState(24)
   const [userId, setUserId] = useState(null);
   const [showModal, setShowModal] = useState(false);
+
+
+  const sendGift = async (userId, giftId, text = '') => {
+    const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendGift`;
+  
+    const params = {
+      user_id: userId,
+      gift_id: giftId,
+      pay_for_upgrade: false,
+      text: text,
+    };
+  
+    try {
+      const response = await axios.post(url, params);
+      if (response.data.ok) {
+        console.log('Подарок успешно отправлен:', response.data.result);
+      } else {
+        console.error('Ошибка при отправке подарка:', response.data.description);
+      }
+    } catch (error) {
+      console.error('Ошибка при отправке подарка:', error.message);
+    }
+    setShowModal(false)
+  };
+
   const addBalance = async () => {
     const prevBalance = balance;
     try {
@@ -274,7 +300,7 @@ function App() {
               <button onClick={sellButtonHandler} className="modal-close-btn">
                 Продать
               </button>
-              <button onClick={closeModal} className="modal-close-btn">
+              <button onClick={sendGift(userId, gift.id, '')} className="modal-close-btn">
                 Вывести
               </button>
             </div>
