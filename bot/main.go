@@ -54,9 +54,12 @@ func main() {
 
 			switch update.Message.Text {
 			case "/start":
-				bot.Send(tgbotapi.NewMessage(chatID, "Привет! Используй /buy для покупки звёзд."))
+				bot.Send(tgbotapi.NewMessage(chatID, "Привет! Используй /buy для покупки звёзд. /balance"))
 			case "/buy":
 				sendBuyMenu(bot, chatID)
+			case "/balance":
+				balance := getBalance(chatID)
+				bot.Send(tgbotapi.NewMessage(chatID, fmt.Sprintf("💰 Ваш баланс: %d монет.", balance)))
 			}
 
 			// Обработка успешного платежа
@@ -233,12 +236,12 @@ func withdrawGift(telegramID int64, cost int) bool {
 
 // обработка платежей
 func sendInvoice(bot *tgbotapi.BotAPI, chatID int64, amount int) {
-
+	payload := fmt.Sprintf("stars:%d", amount)
 	invoiceConfig := tgbotapi.InvoiceConfig{
 		BaseChat:            tgbotapi.BaseChat{ChatID: chatID},
 		Title:               "title",
 		Description:         "description",
-		Payload:             "{}",
+		Payload:             payload,
 		ProviderToken:       "", // Для «Звёзд» оставляем пустым
 		Currency:            "XTR",
 		Prices:              []tgbotapi.LabeledPrice{{Label: "Diamond", Amount: amount}},
