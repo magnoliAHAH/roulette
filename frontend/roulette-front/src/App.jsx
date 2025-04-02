@@ -18,6 +18,10 @@ function App() {
 
 
   const sendGift = async (userId, giftId) => {
+    if (!userId || !giftId) {
+      throw new Error('Не указан пользователь или подарок');
+    }
+
     const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendGift`;
   
     const params = {
@@ -300,9 +304,25 @@ function App() {
               <button onClick={sellButtonHandler} className="modal-close-btn">
                 Продать
               </button>
-              <button onClick={() => sendGift(userId, gift.id)} disabled={isSending} className="modal-close-btn">
-                {isSending ? "Отправка..." : "Вывести"}
-              </button>
+              <button 
+        onClick={async () => {
+          if (!userId || !gift?.id) return;
+          
+          setIsSending(true);
+          try {
+            await sendGift(userId, gift.id);
+            setShowModal(false);
+          } catch (error) {
+            console.error(error);
+          } finally {
+            setIsSending(false);
+          }
+        }}
+        disabled={isSending}
+        className="modal-close-btn"
+      >
+        {isSending ? "Отправка..." : "Вывести"}
+      </button>
             </div>
           </div>
         </div>
