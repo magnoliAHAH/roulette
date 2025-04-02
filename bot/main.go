@@ -41,60 +41,76 @@ func main() {
 			chatID := update.Message.Chat.ID
 			addUser(chatID)
 
+			if state, ok := userStates[chatID]; ok && state == "waiting_amount" {
+				amount, err := strconv.Atoi(update.Message.Text)
+				if err != nil || amount <= 0 {
+					bot.Send(tgbotapi.NewMessage(chatID, "❌ Введите положительное число"))
+					continue
+				}
+				sendInvoice(bot, chatID, amount)
+				delete(userStates, chatID)
+				continue
+			}
+
 			switch update.Message.Text {
 			case "/start":
 				bot.Send(tgbotapi.NewMessage(chatID, "Привет! Используй /buy для покупки звёзд."))
 			case "/buy":
-				sendStarsSelection(bot, chatID)
+				sendBuyMenu(bot, chatID)
+			}
+
+			// Обработка успешного платежа
+			if update.Message.SuccessfulPayment != nil {
+				handleSuccessfulPayment(bot, update.Message)
 			}
 		}
 
-		// Обработка нажатия inline-кнопок
 		if update.CallbackQuery != nil {
 			chatID := update.CallbackQuery.Message.Chat.ID
 			data := update.CallbackQuery.Data
 
 			if strings.HasPrefix(data, "buy_stars:") {
-				amount, _ := strconv.Atoi(strings.TrimPrefix(data, "buy_stars:"))
+				amount, _ := strconv.Atoi(strings.Split(data, ":")[1])
 				sendInvoice(bot, chatID, amount)
 			} else if data == "custom_amount" {
-				msg := tgbotapi.NewMessage(chatID, "Введите нужное количество звёзд:")
+				msg := tgbotapi.NewMessage(chatID, "Введите количество звёзд:")
 				bot.Send(msg)
-				userStates[chatID] = "waiting_stars_amount"
+				userStates[chatID] = "waiting_amount"
 			}
 
-			// Подтверждаем нажатие кнопки
-			bot.Send(tgbotapi.NewCallback(update.CallbackQuery.ID, ""))
-		}
-
-		// Обработка ручного ввода количества
-		if update.Message != nil {
-			if state, ok := userStates[update.Message.Chat.ID]; ok && state == "waiting_stars_amount" {
-				amount, err := strconv.Atoi(update.Message.Text)
-				if err != nil || amount <= 0 {
-					bot.Send(tgbotapi.NewMessage(update.Message.Chat.ID, "❌ Введите положительное число"))
-					return
-				}
-				sendInvoice(bot, update.Message.Chat.ID, amount)
-				delete(userStates, update.Message.Chat.ID)
+			// Важно: подтверждаем callback
+			callback := tgbotapi.NewCallback(update.CallbackQuery.ID, "")
+			if _, err := bot.Request(callback); err != nil {
+				log.Println("Callback error:", err)
 			}
 		}
 
-		// Обработка платежей (остаётся без изменений)
 		if update.PreCheckoutQuery != nil {
-			_, err := bot.Send(tgbotapi.PreCheckoutConfig{
+			// Важно: правильно подтверждаем preCheckout
+			_, err := bot.Request(tgbotapi.PreCheckoutConfig{
 				PreCheckoutQueryID: update.PreCheckoutQuery.ID,
 				OK:                 true,
 			})
 			if err != nil {
-				log.Println(err)
+				log.Println("PreCheckout error:", err)
 			}
 		}
-
-		if update.Message != nil && update.Message.SuccessfulPayment != nil {
-			handleSuccessfulPayment(bot, update.Message.Chat.ID, update.Message.SuccessfulPayment)
-		}
 	}
+}
+
+func sendBuyMenu(bot *tgbotapi.BotAPI, chatID int64) {
+	msg := tgbotapi.NewMessage(chatID, "🎯 Выберите количество звёзд:")
+	msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(
+		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonData("24 ⭐", "buy_stars:24"),
+			tgbotapi.NewInlineKeyboardButtonData("50 ⭐", "buy_stars:50"),
+		),
+		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonData("100 ⭐", "buy_stars:100"),
+			tgbotapi.NewInlineKeyboardButtonData("Другое количество", "custom_amount"),
+		),
+	)
+	bot.Send(msg)
 }
 
 // 🔹 Подключение к БД
@@ -234,22 +250,30 @@ func sendInvoice(bot *tgbotapi.BotAPI, chatID int64, amount int) {
 		log.Printf("Ошибка при отправке инвойса: %v", err)
 	}
 }
-func handleSuccessfulPayment(bot *tgbotapi.BotAPI, chatID int64, payment *tgbotapi.SuccessfulPayment) {
-	parts := strings.Split(payment.InvoicePayload, ":")
+func handleSuccessfulPayment(bot *tgbotapi.BotAPI, msg *tgbotapi.Message) {
+	chatID := msg.Chat.ID
+	payload := msg.SuccessfulPayment.InvoicePayload
+
+	// Извлекаем количество из payload
+	parts := strings.Split(payload, ":")
 	if len(parts) != 2 {
-		log.Println("Неверный формат payload")
+		log.Println("Неверный формат payload:", payload)
+		bot.Send(tgbotapi.NewMessage(chatID, "❌ Ошибка обработки платежа (неверный формат)"))
 		return
 	}
 
 	amount, err := strconv.Atoi(parts[1])
 	if err != nil {
 		log.Println("Ошибка парсинга количества:", err)
+		bot.Send(tgbotapi.NewMessage(chatID, "❌ Ошибка обработки платежа"))
 		return
 	}
 
+	// Зачисляем средства
 	addBalance(chatID, amount)
-	bot.Send(tgbotapi.NewMessage(chatID, fmt.Sprintf(
-		"✅ Успешная покупка! Ваш баланс пополнен на %d звёзд.\nНовый баланс: %d",
-		amount, getBalance(chatID),
-	)))
+
+	// Отправляем подтверждение
+	balance := getBalance(chatID)
+	response := fmt.Sprintf("✅ Платеж успешен! Зачислено %d звёзд.\nВаш баланс: %d", amount, balance)
+	bot.Send(tgbotapi.NewMessage(chatID, response))
 }
