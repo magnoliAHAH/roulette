@@ -16,14 +16,13 @@ function App() {
   const [showModal, setShowModal] = useState(false);
 
 
-  const sendGift = async (userId, giftId, text = '') => {
+  const sendGift = async (userId, giftId) => {
     const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendGift`;
   
     const params = {
       user_id: userId,
       gift_id: giftId,
       pay_for_upgrade: false,
-      text: text,
     };
   
     try {
@@ -300,7 +299,7 @@ function App() {
               <button onClick={sellButtonHandler} className="modal-close-btn">
                 Продать
               </button>
-              <button onClick={sendGift(userId, gift.id, '')} className="modal-close-btn">
+              <button onClick={sendGift(userId, gift.id)} className="modal-close-btn">
                 Вывести
               </button>
             </div>
