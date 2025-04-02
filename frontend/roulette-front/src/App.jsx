@@ -14,6 +14,7 @@ function App() {
   const [spinCost, setSpinCost] = useState(24)
   const [userId, setUserId] = useState(null);
   const [showModal, setShowModal] = useState(false);
+  const [isSending, setIsSending] = useState(false);
 
 
   const sendGift = async (userId, giftId) => {
@@ -258,6 +259,15 @@ function App() {
     return shuffledArray;
   };
 
+  const handleSendGift = async () => {
+    setIsSending(true);
+    try {
+      await sendGift(userId, gift.id);
+    } finally {
+      setIsSending(false);
+    }
+  };
+
   return (
     <div className="app">
       
@@ -299,8 +309,8 @@ function App() {
               <button onClick={sellButtonHandler} className="modal-close-btn">
                 Продать
               </button>
-              <button onClick={sendGift(userId, gift.id)} className="modal-close-btn">
-                Вывести
+              <button onClick={handleSendGift} disabled={isSending} className="modal-close-btn">
+                {isSending ? "Отправка..." : "Вывести"}
               </button>
             </div>
           </div>
