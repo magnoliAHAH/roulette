@@ -40,6 +40,22 @@ func main() {
 		if update.Message != nil {
 			handleMessage(bot, update.Message)
 		}
+
+		// Обработка PreCheckoutQuery (подтверждение платежа)
+		if update.PreCheckoutQuery != nil {
+			_, err := bot.Send(tgbotapi.PreCheckoutConfig{
+				PreCheckoutQueryID: update.PreCheckoutQuery.ID,
+				OK:                 true,
+			})
+			if err != nil {
+				log.Printf("Ошибка подтверждения PreCheckoutQuery: %v", err)
+			}
+		}
+
+		// Обработка успешного платежа
+		if update.Message != nil && update.Message.SuccessfulPayment != nil {
+			handleSuccessfulPayment(bot, update.Message.Chat.ID)
+		}
 	}
 }
 
@@ -98,6 +114,8 @@ func handleMessage(bot *tgbotapi.BotAPI, msg *tgbotapi.Message) {
 		} else {
 			bot.Send(tgbotapi.NewMessage(chatID, "❌ Недостаточно монет для вывода подарка."))
 		}
+	case "/buy":
+		sendInvoice(bot, chatID) // Отправляем инвойс для оплаты
 	}
 }
 
@@ -144,3 +162,28 @@ func withdrawGift(telegramID int64, cost int) bool {
 }
 
 // обработка платежей
+func sendInvoice(bot *tgbotapi.BotAPI, chatID int64) {
+
+	invoiceConfig := tgbotapi.InvoiceConfig{
+		BaseChat:            tgbotapi.BaseChat{ChatID: chatID},
+		Title:               "title",
+		Description:         "description",
+		Payload:             "{}",
+		ProviderToken:       "", // Для «Звёзд» оставляем пустым
+		Currency:            "XTR",
+		Prices:              []tgbotapi.LabeledPrice{{Label: "Diamond", Amount: 1}},
+		SuggestedTipAmounts: []int{},
+	}
+
+	_, err := bot.Send(invoiceConfig)
+	if err != nil {
+		log.Printf("Ошибка при отправке инвойса: %v", err)
+	}
+}
+func handleSuccessfulPayment(bot *tgbotapi.BotAPI, chatID int64) {
+	msg := tgbotapi.NewMessage(chatID, "✅ Платеж успешно завершен! Спасибо за покупку!")
+	_, err := bot.Send(msg)
+	if err != nil {
+		log.Printf("Ошибка при отправке сообщения: %v", err)
+	}
+}
