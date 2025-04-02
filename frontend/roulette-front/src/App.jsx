@@ -259,30 +259,6 @@ function App() {
     return shuffledArray;
   };
 
-  const handleSendGift = async () => {
-    if (!userId || !gift?.id) {
-      alert('Ошибка: недостаточно данных для отправки');
-      return;
-    }
-  
-    setIsSending(true);
-    
-    try {
-      const success = await sendGift(userId, gift.id);
-      
-      if (success) {
-        setShowModal(false); // Закрываем модалку только при успехе
-      } else {
-        alert('Не удалось отправить подарок');
-      }
-    } catch (error) {
-      console.error('Ошибка отправки:', error);
-      alert(`Ошибка: ${error.message}`);
-    } finally {
-      setIsSending(false);
-    }
-  };
-
   return (
     <div className="app">
       
@@ -324,7 +300,7 @@ function App() {
               <button onClick={sellButtonHandler} className="modal-close-btn">
                 Продать
               </button>
-              <button onClick={handleSendGift} disabled={isSending} className="modal-close-btn">
+              <button onClick={() => sendGift(userId, gift.id)} disabled={isSending} className="modal-close-btn">
                 {isSending ? "Отправка..." : "Вывести"}
               </button>
             </div>
