@@ -5,12 +5,15 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
+	"strings"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	_ "github.com/lib/pq"
 )
 
 var db *sql.DB
+var userStates = make(map[int64]string)
 
 func main() {
 	// Загружаем переменные из .env
@@ -26,35 +29,70 @@ func main() {
 	botToken := os.Getenv("TELEGRAM_BOT_TOKEN")
 	bot, err := tgbotapi.NewBotAPI(botToken)
 	if err != nil {
-		log.Fatal("Ошибка при создании бота:", err)
+		log.Panic(err)
 	}
 
-	// Запуск слушателя сообщений
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 60
 	updates := bot.GetUpdatesChan(u)
 
-	fmt.Println("🤖 Бот запущен!")
-
 	for update := range updates {
 		if update.Message != nil {
-			handleMessage(bot, update.Message)
+			chatID := update.Message.Chat.ID
+			addUser(chatID)
+
+			switch update.Message.Text {
+			case "/start":
+				bot.Send(tgbotapi.NewMessage(chatID, "Привет! Используй /buy для покупки звёзд."))
+			case "/buy":
+				sendStarsSelection(bot, chatID)
+			}
 		}
 
-		// Обработка PreCheckoutQuery (подтверждение платежа)
+		// Обработка нажатия inline-кнопок
+		if update.CallbackQuery != nil {
+			chatID := update.CallbackQuery.Message.Chat.ID
+			data := update.CallbackQuery.Data
+
+			if strings.HasPrefix(data, "buy_stars:") {
+				amount, _ := strconv.Atoi(strings.TrimPrefix(data, "buy_stars:"))
+				sendInvoice(bot, chatID, amount)
+			} else if data == "custom_amount" {
+				msg := tgbotapi.NewMessage(chatID, "Введите нужное количество звёзд:")
+				bot.Send(msg)
+				userStates[chatID] = "waiting_stars_amount"
+			}
+
+			// Подтверждаем нажатие кнопки
+			bot.Send(tgbotapi.NewCallback(update.CallbackQuery.ID, ""))
+		}
+
+		// Обработка ручного ввода количества
+		if update.Message != nil {
+			if state, ok := userStates[update.Message.Chat.ID]; ok && state == "waiting_stars_amount" {
+				amount, err := strconv.Atoi(update.Message.Text)
+				if err != nil || amount <= 0 {
+					bot.Send(tgbotapi.NewMessage(update.Message.Chat.ID, "❌ Введите положительное число"))
+					return
+				}
+				sendInvoice(bot, update.Message.Chat.ID, amount)
+				delete(userStates, update.Message.Chat.ID)
+			}
+		}
+
+		// Обработка платежей (остаётся без изменений)
 		if update.PreCheckoutQuery != nil {
 			_, err := bot.Send(tgbotapi.PreCheckoutConfig{
 				PreCheckoutQueryID: update.PreCheckoutQuery.ID,
 				OK:                 true,
 			})
 			if err != nil {
-				log.Printf("Ошибка подтверждения PreCheckoutQuery: %v", err)
+				log.Println(err)
 			}
 		}
 
-		// Обработка успешного платежа
 		if update.Message != nil && update.Message.SuccessfulPayment != nil {
-			handleSuccessfulPayment(bot, update.Message.Chat.ID)
+			handleSuccessfulPayment(bot, update.Message.Chat.ID, update.Message.SuccessfulPayment)
 		}
 	}
 }
@@ -115,8 +153,24 @@ func handleMessage(bot *tgbotapi.BotAPI, msg *tgbotapi.Message) {
 			bot.Send(tgbotapi.NewMessage(chatID, "❌ Недостаточно монет для вывода подарка."))
 		}
 	case "/buy":
-		sendInvoice(bot, chatID) // Отправляем инвойс для оплаты
+		sendStarsSelection(bot, chatID) // Отправляем инвойс для оплаты
 	}
+}
+
+func sendStarsSelection(bot *tgbotapi.BotAPI, chatID int64) {
+	msg := tgbotapi.NewMessage(chatID, "⭐ Выберите количество звёзд:")
+	markup := tgbotapi.NewInlineKeyboardMarkup(
+		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonData("24 ⭐", "buy_stars:24"),
+			tgbotapi.NewInlineKeyboardButtonData("50 ⭐", "buy_stars:50"),
+		),
+		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonData("100 ⭐", "buy_stars:100"),
+			tgbotapi.NewInlineKeyboardButtonData("Другое количество", "custom_amount"),
+		),
+	)
+	msg.ReplyMarkup = markup
+	bot.Send(msg)
 }
 
 // 🔹 Добавление пользователя
@@ -162,7 +216,7 @@ func withdrawGift(telegramID int64, cost int) bool {
 }
 
 // обработка платежей
-func sendInvoice(bot *tgbotapi.BotAPI, chatID int64) {
+func sendInvoice(bot *tgbotapi.BotAPI, chatID int64, amount int) {
 
 	invoiceConfig := tgbotapi.InvoiceConfig{
 		BaseChat:            tgbotapi.BaseChat{ChatID: chatID},
@@ -171,7 +225,7 @@ func sendInvoice(bot *tgbotapi.BotAPI, chatID int64) {
 		Payload:             "{}",
 		ProviderToken:       "", // Для «Звёзд» оставляем пустым
 		Currency:            "XTR",
-		Prices:              []tgbotapi.LabeledPrice{{Label: "Diamond", Amount: 1}},
+		Prices:              []tgbotapi.LabeledPrice{{Label: "Diamond", Amount: amount}},
 		SuggestedTipAmounts: []int{},
 	}
 
@@ -180,10 +234,22 @@ func sendInvoice(bot *tgbotapi.BotAPI, chatID int64) {
 		log.Printf("Ошибка при отправке инвойса: %v", err)
 	}
 }
-func handleSuccessfulPayment(bot *tgbotapi.BotAPI, chatID int64) {
-	msg := tgbotapi.NewMessage(chatID, "✅ Платеж успешно завершен! Спасибо за покупку!")
-	_, err := bot.Send(msg)
-	if err != nil {
-		log.Printf("Ошибка при отправке сообщения: %v", err)
+func handleSuccessfulPayment(bot *tgbotapi.BotAPI, chatID int64, payment *tgbotapi.SuccessfulPayment) {
+	parts := strings.Split(payment.InvoicePayload, ":")
+	if len(parts) != 2 {
+		log.Println("Неверный формат payload")
+		return
 	}
+
+	amount, err := strconv.Atoi(parts[1])
+	if err != nil {
+		log.Println("Ошибка парсинга количества:", err)
+		return
+	}
+
+	addBalance(chatID, amount)
+	bot.Send(tgbotapi.NewMessage(chatID, fmt.Sprintf(
+		"✅ Успешная покупка! Ваш баланс пополнен на %d звёзд.\nНовый баланс: %d",
+		amount, getBalance(chatID),
+	)))
 }
