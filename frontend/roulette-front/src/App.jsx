@@ -260,9 +260,24 @@ function App() {
   };
 
   const handleSendGift = async () => {
+    if (!userId || !gift?.id) {
+      alert('Ошибка: недостаточно данных для отправки');
+      return;
+    }
+  
     setIsSending(true);
+    
     try {
-      await sendGift(userId, gift.id);
+      const success = await sendGift(userId, gift.id);
+      
+      if (success) {
+        setShowModal(false); // Закрываем модалку только при успехе
+      } else {
+        alert('Не удалось отправить подарок');
+      }
+    } catch (error) {
+      console.error('Ошибка отправки:', error);
+      alert(`Ошибка: ${error.message}`);
     } finally {
       setIsSending(false);
     }
