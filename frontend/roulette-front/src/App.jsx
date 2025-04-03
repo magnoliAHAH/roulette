@@ -15,11 +15,21 @@ function App() {
   const [userId, setUserId] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [notification, setNotification] = useState(null);
 
+  useEffect(() => {
+    if (notification) {
+      const timer = setTimeout(() => {
+        setNotification(null);
+      }, 2500);
+      return () => clearTimeout(timer);
+    }
+  }, [notification]);
 
   const sendGift = async (userId, giftId) => {
     if (!userId || !giftId) {
-      throw new Error('Не указан пользователь или подарок');
+      setNotification({ type: 'error', message: 'Не указан пользователь или подарок' });
+      return;
     }
 
     const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendGift`;
@@ -33,12 +43,12 @@ function App() {
     try {
       const response = await axios.post(url, params);
       if (response.data.ok) {
-        console.log('Подарок успешно отправлен:', response.data.result);
+        setNotification({ type: 'success', message: 'Подарок успешно отправлен!' });
       } else {
-        console.error('Ошибка при отправке подарка:', response.data.description);
+        setNotification({ type: 'error', message: `Ошибка: ${response.data.description}` });
       }
     } catch (error) {
-      console.error('Ошибка при отправке подарка:', error.message);
+      setNotification({ type: 'error', message: `Ошибка сети: ${error.message}` });
     }
     setShowModal(false)
   };
@@ -325,6 +335,14 @@ function App() {
       </button>
             </div>
           </div>
+        </div>
+      )}
+      {notification && (
+        <div className={`notification ${notification.type}`}>
+          {notification.message}
+          <button onClick={() => setNotification(null)} className="notification-close">
+            ×
+          </button>
         </div>
       )}
     </div>
