@@ -53,51 +53,14 @@ function App() {
     setShowModal(false)
   };
 
-  const addBalance = async () => {
-    const prevBalance = balance;
-    try {
-      // 1. Списание баланса (точно как в работающем cURL)
-      const adjustResponse = await axios.post(
-        'https://supreme-roulette.work.gd/api/adjust-balance',
-        {
-          user_id: String(userId),
-          delta: gift.price,
-          reason: "Add by Button"
-        },
-        {
-          headers: { 
-            'X-API-Key': API_KEY,
-            'Content-Type': 'application/json'
-          },
-          timeout: 10000
-        }
-      );
-  
-      // 2. Валидация ответа
-      if (!adjustResponse.data?.success) {
-        throw new Error('Balance adjustment failed: ' + JSON.stringify(adjustResponse.data));
-      }
-  
-      // 3. Логирование для отладки
-      console.log('Balance adjusted:', adjustResponse.data);
-  
-      // 4. Обновляем баланс на фронтенде
-      setBalance(prevBalance + spinCost); // Списываем 1 единицу, как в API
-  
-    } catch (error) {
-      console.error('Error in Selling:', error);
-      setBalance(prevBalance); // Откат
-      
-      // Дополнительная диагностика
-      if (error.response) {
-        console.error('Server response:', error.response.data);
-      }
-    }
+  const addBalance = () => {
+    setNotification({ type: 'error', message: `Пополни баланс через бота /buy` });
   };
 
   useEffect(() => {
     if (window.Telegram?.WebApp?.initDataUnsafe?.user) {
       const userId = window.Telegram.WebApp.initDataUnsafe.user.id;
+      const nameTg = window.Telegram.WebApp.initDataUnsafe.user.name
       setUserId(userId);
 
       fetch(`https://supreme-roulette.work.gd/api/balance?user_id=${userId}`, 
@@ -278,8 +241,8 @@ function App() {
     <div className="app">
       
       <div className='upper-menu'>
-        <div>
-          <h1>{userId}</h1>
+        <div style={{ fontSize: "14px" }}>
+          <h1>{nameTg}</h1>
         </div>
 
         <div className='converted-starts'>
