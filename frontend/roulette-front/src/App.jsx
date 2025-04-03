@@ -149,7 +149,7 @@ function App() {
     const prevBalance = balance;
     setIsSpinning(true);
     setShowModal(false);
-    setStickerUrl(gift.image)
+    setStickerUrl("/stickers/file_0.tgs")
   
     try {
       // 1. Списание баланса (точно как в работающем cURL)
