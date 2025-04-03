@@ -16,6 +16,8 @@ function App() {
   const [showModal, setShowModal] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [notification, setNotification] = useState(null);
+  const [firstName, setFirstName] = useState('');
+  const [userAvatar, setUserAvatar] = useState('');
 
   useEffect(() => {
     if (notification) {
@@ -59,9 +61,15 @@ function App() {
 
   useEffect(() => {
     if (window.Telegram?.WebApp?.initDataUnsafe?.user) {
-      const userId = window.Telegram.WebApp.initDataUnsafe.user.id;
-      const nameTg = window.Telegram.WebApp.initDataUnsafe.user.name
+      const tgUser = window.Telegram.WebApp.initDataUnsafe.user;
+    
+    // Основные данные
+      const userId = tgUser.id;
+      const firstName = tgUser.first_name;
+      const avatarUrl = tgUser.photo_url || '';
+      setFirstName(firstName);
       setUserId(userId);
+      setUserAvatar(avatarUrl);
 
       fetch(`https://supreme-roulette.work.gd/api/balance?user_id=${userId}`, 
         {
@@ -241,9 +249,21 @@ function App() {
     <div className="app">
       
       <div className='upper-menu'>
-        <div style={{ fontSize: "14px" }}>
-          <h1>{nameTg}</h1>
+      <div className='user-info'>
+        {userAvatar && (
+          <img 
+            src={userAvatar} 
+            alt="User Avatar"
+            className="user-avatar"
+            onError={(e) => {
+              e.target.style.display = 'none'; // Скрыть если изображение не загрузится
+            }}
+          />
+        )}
+        <div className="user-name">
+          {firstName || 'Anonymous'}
         </div>
+      </div>
 
         <div className='converted-starts'>
           <img src='/images/stars-logo.png' className='stars-image'></img>
