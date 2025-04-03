@@ -149,7 +149,7 @@ function App() {
     const prevBalance = balance;
     setIsSpinning(true);
     setShowModal(false);
-    setStickerUrl(`https://api.telegram.org/file/bot${BOT_TOKEN}/${gift.image}`)
+    setStickerUrl(gift.image)
   
     try {
       // 1. Списание баланса (точно как в работающем cURL)
