@@ -115,34 +115,30 @@ body {
 
 .notification {
   position: fixed;
-  bottom: 20px; /* Изменено с top на bottom */
+  bottom: 20px;
   left: 50%;
   transform: translateX(-50%);
-  padding: 15px 40px 15px 20px;
+  width: 90%; /* Добавляем ограничение ширины */
+  max-width: 400px; /* Максимальная ширина для десктопов */
+  padding: 12px 35px 12px 15px; /* Уменьшаем отступы */
   border-radius: 8px;
   color: white;
   font-weight: 500;
+  font-size: 14px; /* Уменьшаем размер шрифта */
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  z-index: 1001; /* Убедитесь что выше чем у модалки */
+  z-index: 1001;
   animation: slideIn 0.3s ease-out;
+  box-sizing: border-box; /* Важно для мобилок */
 }
 
-@keyframes slideIn {
-  from {
-    bottom: -50px; /* Анимация теперь снизу */
+/* Адаптация для маленьких экранов */
+@media (max-width: 480px) {
+  .notification {
+    width: 95%; /* Увеличиваем занимаемое пространство */
+    bottom: 10px; /* Уменьшаем отступ снизу */
+    font-size: 13px;
+    padding: 10px 30px 10px 12px;
   }
-  to {
-    bottom: 20px; /* Финишная позиция */
-  }
-}
-
-/* Остальные стили оставить без изменений */
-.notification.success {
-  background-color: #4CAF50;
-}
-
-.notification.error {
-  background-color: #f44336;
 }
 
 .notification-close {
@@ -153,7 +149,18 @@ body {
   background: none;
   border: none;
   color: white;
-  font-size: 20px;
+  font-size: 18px; /* Уменьшаем размер крестика */
   cursor: pointer;
   padding: 0 5px;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translate(-50%, 100%);
+    opacity: 0;
+  }
+  to {
+    transform: translate(-50%, 0);
+    opacity: 1;
+  }
 }
