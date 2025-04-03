@@ -156,7 +156,8 @@ function App() {
       console.log('Balance adjusted:', adjustResponse.data);
   
       // 4. Обновляем баланс на фронтенде
-      setBalance(prevBalance + gift.price); 
+      setBalance(prevBalance + gift.price);
+      setNotification({ type: 'success', message: 'Подарок успешно продан!' });
   
     } catch (error) {
       console.error('Error in Selling:', error);

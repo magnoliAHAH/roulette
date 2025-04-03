@@ -115,7 +115,7 @@ body {
 
 .notification {
   position: fixed;
-  top: 20px;
+  bottom: 20px; /* Изменено с top на bottom */
   left: 50%;
   transform: translateX(-50%);
   padding: 15px 40px 15px 20px;
@@ -123,10 +123,20 @@ body {
   color: white;
   font-weight: 500;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  z-index: 1000;
+  z-index: 1001; /* Убедитесь что выше чем у модалки */
   animation: slideIn 0.3s ease-out;
 }
 
+@keyframes slideIn {
+  from {
+    bottom: -50px; /* Анимация теперь снизу */
+  }
+  to {
+    bottom: 20px; /* Финишная позиция */
+  }
+}
+
+/* Остальные стили оставить без изменений */
 .notification.success {
   background-color: #4CAF50;
 }
@@ -146,13 +156,4 @@ body {
   font-size: 20px;
   cursor: pointer;
   padding: 0 5px;
-}
-
-@keyframes slideIn {
-  from {
-    top: -50px;
-  }
-  to {
-    top: 20px;
-  }
 }
