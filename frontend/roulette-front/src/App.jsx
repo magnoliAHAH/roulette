@@ -18,6 +18,7 @@ function App() {
   const [notification, setNotification] = useState(null);
   const [firstName, setFirstName] = useState('');
   const [userAvatar, setUserAvatar] = useState('');
+  const [stickerUrl, setStickerUrl] = useState('');
 
   useEffect(() => {
     if (notification) {
@@ -148,6 +149,7 @@ function App() {
     const prevBalance = balance;
     setIsSpinning(true);
     setShowModal(false);
+    setStickerUrl(`https://api.telegram.org/file/bot${BOT_TOKEN}/${gift.image}`)
   
     try {
       // 1. Списание баланса (точно как в работающем cURL)
@@ -213,6 +215,7 @@ function App() {
     }
     extendedGifts[20] = winningGift;
     return extendedGifts;
+    
   };
 
   const animateSpin = (winningIndex) => {
@@ -244,6 +247,8 @@ function App() {
     }
     return shuffledArray;
   };
+
+
 
   return (
     <div className="app">
@@ -293,7 +298,13 @@ function App() {
           <div className="modal">
             <h2>Поздравляем!</h2>
             <p>Вы выиграли: {gift.name}</p>
-            <img src={gift.image} alt={gift.name} />
+            <tgs-player
+              mode="normal"
+              src={stickerUrl}
+              play
+              loop
+              style={{ width: '256px', height: '256px' }}
+            ></tgs-player>
             <div>
               <button onClick={sellButtonHandler} className="modal-close-btn">
                 Продать
