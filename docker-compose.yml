@@ -62,6 +62,7 @@ services:
     ports:
       - "8080:8080"
     environment:
+      - TELEGRAM_BOT_TOKEN=7513080511:AAFQHYyrZROaysopau2WF3Qi8NjtTj7p0q4
       - DATABASE_URL=postgres://postgres:password@db:5432/telegram_bot?sslmode=disable
       - API_SECRET=dev_5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8
       - PORT=8080
