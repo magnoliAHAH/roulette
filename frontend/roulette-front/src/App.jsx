@@ -3,6 +3,7 @@ import axios from 'axios';
 import Lottie from "lottie-react"
 import './App.css';
 import { IoAddCircleOutline } from "react-icons/io5";
+import { unzip } from 'react-zlib-js'
 
 function App() {
   const API_KEY = "dev_5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8"
