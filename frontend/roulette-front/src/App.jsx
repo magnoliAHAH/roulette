@@ -205,12 +205,14 @@ function App() {
             setStickerData(animationData);
           } catch (parseError) {
             console.error('Error parsing sticker content:', parseError);
+            setNotification({ type: 'error', message: `Ошибка парсинга: ${parseError}` });
             // Если не удалось распарсить, сохраняем как есть
             setStickerData(stickerResponse.data);
           }
         } else {
           // Если структура ответа отличается
           setStickerData(stickerResponse.data);
+          setNotification({ type: 'error', message: `Структура ответа отличается` });
         }
       }
   
@@ -220,9 +222,11 @@ function App() {
       console.error('Error in startSpin:', error);
       setBalance(prevBalance);
       setIsSpinning(false);
+      setNotification({ type: 'error', message: `Ошибка прокрута: ${error}` });
       
       if (error.response) {
         console.error('Server response:', error.response.data);
+        setNotification({ type: 'error', message: `Ошибка ответа: ${error.response.data}` });
       }
     }
   };
