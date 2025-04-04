@@ -3,7 +3,6 @@ import axios from 'axios';
 import Lottie from "lottie-react"
 import './App.css';
 import { IoAddCircleOutline } from "react-icons/io5";
-import { unzip } from 'react-zlib-js'
 
 function App() {
   const API_KEY = "dev_5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8"
@@ -169,6 +168,7 @@ function App() {
     const prevBalance = balance;
     setIsSpinning(true);
     setShowModal(false);
+    setStickerData(null);
   
     try {
       // 1. Списание баланса (точно как в работающем cURL)
@@ -187,6 +187,7 @@ function App() {
           timeout: 10000
         }
       );
+
   
       // 2. Валидация ответа
       if (!adjustResponse.data?.success) {
@@ -207,11 +208,43 @@ function App() {
           timeout: 10000
         }
       );
-      
+
       setGift(giftResponse.data);
       setGiftsList(generateGiftSequence(giftResponse.data));
+
+      if (giftResponse.data.id) {
+        try {
+          const lottieResponse = await axios.get(
+            `https://supreme-roulette.work.gd/api/lottie?file_id=${giftResponse.data.id}&with_content=true`,
+            {
+              headers: { 'X-API-Key': API_KEY },
+              timeout: 10000
+            }
+          );
+          
+          // Проверяем и парсим содержимое
+          if (lottieResponse.data?.content) {
+            try {
+              const animationData = JSON.parse(lottieResponse.data.content);
+              setStickerData(animationData);
+            } catch (parseError) {
+              console.error('Error parsing Lottie content:', parseError);
+              // Если не удалось распарсить, сохраняем как есть
+              setStickerData(lottieResponse.data);
+            }
+          } else {
+            setStickerData(lottieResponse.data);
+          }
+        } catch (lottieError) {
+          console.error('Error fetching Lottie animation:', lottieError);
+          // Продолжаем работу даже если не удалось получить анимацию
+        }
+      }
+
       animateSpin(9);
-  
+      
+
+
     } catch (error) {
       console.error('Error in startSpin:', error);
       setBalance(prevBalance); // Откат
@@ -281,7 +314,19 @@ function App() {
         <div className="wheel" style={{ transform: `translateX(-${spinPosition}px)` }}>
           {giftsList.map((gift, index) => (
             <div key={index} className="gift-item">
-              <img src={gift.image} alt={gift.name} />
+
+              <div style={{ width: 200, height: 200 }}>
+                  {stickerData ? (
+                    <Lottie 
+                      animationData={stickerData.content ? JSON.parse(stickerData.content) : stickerData}
+                      loop={true}
+                      autoplay={true}
+                    />
+                  ) : (
+                    <img src={gift.image} alt={gift.name} style={{ maxWidth: '100%' }} />
+                  )}
+                </div>
+
               <div>{gift.name}</div>
               <div className="gift-label">Элемент {index + 1}</div> {/* Подпись для каждого элемента */}
             </div>
