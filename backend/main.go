@@ -404,7 +404,7 @@ func main() {
 	http.HandleFunc("/api/gift", apiKeyMiddleware(giftHandler))
 	http.HandleFunc("/api/balance", apiKeyMiddleware(balanceHandler))
 	http.HandleFunc("/api/adjust-balance", apiKeyMiddleware(adjustBalanceHandler))
-	http.HandleFunc("/api/filepath", apiKeyMiddleware(filePathHandler))
+	http.HandleFunc("/api/lottie", apiKeyMiddleware(lottieHandler))
 
 	// Запуск сервера
 	port := os.Getenv("PORT")
@@ -417,7 +417,8 @@ func main() {
 	log.Println("GET  /api/gift - Получить случайный подарок")
 	log.Println("GET  /api/balance?user_id=ID - Получить баланс")
 	log.Println("POST /api/adjust-balance - Изменить баланс (delta)")
-	log.Println("GET  /api/filepath?file_id=ID - Получить file_path из Telegram API")
+	log.Println("GET  /api/lottie?file_id=ID - Получить Lottie-файл")
+	log.Println("GET  /api/lottie?file_id=ID&with_content=true - Получить Lottie-файл с содержимым")
 
 	log.Fatal(http.ListenAndServe(":"+port, nil))
 }
