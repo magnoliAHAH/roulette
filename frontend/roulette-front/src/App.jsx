@@ -17,6 +17,18 @@ function App() {
   const [showModal, setShowModal] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [stickerData, setStickerData] = useState(null);
+  const [notification, setNotification] = useState(null);
+  const [firstName, setFirstName] = useState('');
+  const [userAvatar, setUserAvatar] = useState('');
+
+  useEffect(() => {
+    if (notification) {
+      const timer = setTimeout(() => {
+        setNotification(null);
+      }, 2500);
+      return () => clearTimeout(timer);
+    }
+  }, [notification]);
 
   const sendGift = async (userId, giftId) => {
     if (!userId || !giftId) {
@@ -35,55 +47,21 @@ function App() {
       const response = await axios.post(url, params);
       if (response.data.ok) {
         console.log('Подарок успешно отправлен:', response.data.result);
+        setNotification({ type: 'success', message: 'Подарок успешно отправлен!' });
       } else {
         console.error('Ошибка при отправке подарка:', response.data.description);
+        setNotification({ type: 'error', message: `Ошибка: ${response.data.description}` });
       }
     } catch (error) {
       console.error('Ошибка при отправке подарка:', error.message);
+      setNotification({ type: 'error', message: `Ошибка сети: ${error.message}` });
     }
     setShowModal(false)
   };
 
-  const addBalance = async () => {
-    const prevBalance = balance;
-    try {
-      // 1. Списание баланса (точно как в работающем cURL)
-      const adjustResponse = await axios.post(
-        'https://supreme-roulette.work.gd/api/adjust-balance',
-        {
-          user_id: String(userId),
-          delta: gift.price,
-          reason: "Add by Button"
-        },
-        {
-          headers: { 
-            'X-API-Key': API_KEY,
-            'Content-Type': 'application/json'
-          },
-          timeout: 10000
-        }
-      );
-  
-      // 2. Валидация ответа
-      if (!adjustResponse.data?.success) {
-        throw new Error('Balance adjustment failed: ' + JSON.stringify(adjustResponse.data));
-      }
-  
-      // 3. Логирование для отладки
-      console.log('Balance adjusted:', adjustResponse.data);
-  
-      // 4. Обновляем баланс на фронтенде
-      setBalance(prevBalance + spinCost); // Списываем 1 единицу, как в API
-  
-    } catch (error) {
-      console.error('Error in Selling:', error);
-      setBalance(prevBalance); // Откат
-      
-      // Дополнительная диагностика
-      if (error.response) {
-        console.error('Server response:', error.response.data);
-      }
-    }
+  const addBalance = () => {
+    setNotification({ type: 'error', message: `Пополни баланс через бота /buy` });
+    
   };
 
 
@@ -149,14 +127,17 @@ function App() {
   
       // 4. Обновляем баланс на фронтенде
       setBalance(prevBalance + gift.price); 
-  
+      setNotification({ type: 'success', message: 'Подарок успешно продан!' });
     } catch (error) {
       console.error('Error in Selling:', error);
+      setNotification({ type: 'error', message: 'Ошибка продажи' });
+      
       setBalance(prevBalance); // Откат
       
       // Дополнительная диагностика
       if (error.response) {
         console.error('Server response:', error.response.data);
+        setNotification({ type: 'error', message: `Ошибка ответа: ${error.response.data}` });
       }
     }
     setShowModal(false);
@@ -350,6 +331,15 @@ function App() {
       </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {notification && (
+        <div className={`notification ${notification.type}`}>
+          {notification.message}
+          <button onClick={() => setNotification(null)} className="notification-close">
+            ×
+          </button>
         </div>
       )}
     </div>
