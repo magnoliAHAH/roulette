@@ -168,7 +168,6 @@ function App() {
     const prevBalance = balance;
     setIsSpinning(true);
     setShowModal(false);
-    setStickerData(null);
   
     try {
       // 1. Списание баланса (точно как в работающем cURL)
@@ -187,7 +186,7 @@ function App() {
           timeout: 10000
         }
       );
-
+  
       // 2. Валидация ответа
       if (!adjustResponse.data?.success) {
         throw new Error('Balance adjustment failed: ' + JSON.stringify(adjustResponse.data));
@@ -208,13 +207,20 @@ function App() {
         }
       );
       
-      
       setGift(giftResponse.data);
       setGiftsList(generateGiftSequence(giftResponse.data));
+
+      const stickerResponse = await axios.get(
+        `https://supreme-roulette.work.gd/api/lottie?file_id=${gift.id}&with_content=true`,
+        { 
+          headers: { 'X-API-Key': API_KEY },
+          timeout: 10000
+        }
+      );
+      setStickerData(JSON.parse(stickerResponse.content))
+
       animateSpin(9);
-      
-
-
+  
     } catch (error) {
       console.error('Error in startSpin:', error);
       setBalance(prevBalance); // Откат
@@ -284,11 +290,10 @@ function App() {
         <div className="wheel" style={{ transform: `translateX(-${spinPosition}px)` }}>
           {giftsList.map((gift, index) => (
             <div key={index} className="gift-item">
-
               <div style={{ width: 200, height: 200 }}>
                   {stickerData ? (
                     <Lottie 
-                      animationData={stickerData.content ? JSON.parse(stickerData.content) : stickerData}
+                      animationData={stickerData}
                       loop={true}
                       autoplay={true}
                     />
@@ -296,7 +301,7 @@ function App() {
                     <img src={gift.image} alt={gift.name} style={{ maxWidth: '100%' }} />
                   )}
                 </div>
-
+                
               <div>{gift.name}</div>
               <div className="gift-label">Элемент {index + 1}</div> {/* Подпись для каждого элемента */}
             </div>
