@@ -30,6 +30,8 @@ function App() {
     }
   }, [notification]);
 
+  
+
   const sendGift = async (userId, giftId) => {
     if (!userId || !giftId) {
       throw new Error('Не указан пользователь или подарок');
@@ -64,11 +66,16 @@ function App() {
     
   };
 
-
   useEffect(() => {
     if (window.Telegram?.WebApp?.initDataUnsafe?.user) {
-      const userId = window.Telegram.WebApp.initDataUnsafe.user.id;
+      const tgUser = window.Telegram.WebApp.initDataUnsafe.user;
+
+      const userId = tgUser.id;
+      const firstName = tgUser.first_name;
+      const avatarUrl = tgUser.photo_url || '';
+      setFirstName(firstName);
       setUserId(userId);
+      setUserAvatar(avatarUrl);
 
       fetch(`https://supreme-roulette.work.gd/api/balance?user_id=${userId}`, 
         {
