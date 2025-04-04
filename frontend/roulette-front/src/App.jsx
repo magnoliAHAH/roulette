@@ -188,7 +188,6 @@ function App() {
         }
       );
 
-  
       // 2. Валидация ответа
       if (!adjustResponse.data?.success) {
         throw new Error('Balance adjustment failed: ' + JSON.stringify(adjustResponse.data));
@@ -208,39 +207,10 @@ function App() {
           timeout: 10000
         }
       );
-
+      
+      
       setGift(giftResponse.data);
       setGiftsList(generateGiftSequence(giftResponse.data));
-
-      if (giftResponse.data.id) {
-        try {
-          const lottieResponse = await axios.get(
-            `https://supreme-roulette.work.gd/api/lottie?file_id=${giftResponse.data.id}&with_content=true`,
-            {
-              headers: { 'X-API-Key': API_KEY },
-              timeout: 10000
-            }
-          );
-          
-          // Проверяем и парсим содержимое
-          if (lottieResponse.data?.content) {
-            try {
-              const animationData = JSON.parse(lottieResponse.data.content);
-              setStickerData(animationData);
-            } catch (parseError) {
-              console.error('Error parsing Lottie content:', parseError);
-              // Если не удалось распарсить, сохраняем как есть
-              setStickerData(lottieResponse.data);
-            }
-          } else {
-            setStickerData(lottieResponse.data);
-          }
-        } catch (lottieError) {
-          console.error('Error fetching Lottie animation:', lottieError);
-          // Продолжаем работу даже если не удалось получить анимацию
-        }
-      }
-
       animateSpin(9);
       
 
