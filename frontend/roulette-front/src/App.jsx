@@ -206,6 +206,7 @@ function App() {
       const receivedGift = giftResponse.data;
       setGift(receivedGift);
       setGiftsList(generateGiftSequence(receivedGift));
+      animateSpin(9);
   
       // 3. Получаем данные стикера
       if (receivedGift.id) {
@@ -233,7 +234,7 @@ function App() {
         }
       }
   
-      animateSpin(9);
+      
   
     } catch (error) {
       console.error('Error in startSpin:', error);
