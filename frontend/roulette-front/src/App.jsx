@@ -303,9 +303,9 @@ function App() {
         <div className="wheel" style={{ transform: `translateX(-${spinPosition}px)` }}>
           {giftsList.map((gift, index) => (
             <div key={index} className="gift-item">
-              <div style={{ width: 200, height: 200 }}>
-                    <img src={gift.image} alt={gift.name}/>
-                </div>
+              
+              <img src={gift.image} alt={gift.name}/>
+            
                 
               <div>{gift.name}</div>
               <div className="gift-label">Элемент {index + 1}</div> {/* Подпись для каждого элемента */}
