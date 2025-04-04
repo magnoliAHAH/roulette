@@ -84,14 +84,14 @@ function App() {
   }, []);
 
   const gifts = [
-    { id: '1', name: 'Сердце', image: '/images/heart.png', price: '15' },
-    { id: '2', name: 'Мишка', image: '/images/bear.png', price: '15' },
-    { id: '3', name: 'Подарок', image: '/images/present.png', price: '25' },
-    { id: '4', name: 'Цветок', image: '/images/flower.png', price: '25' },
-    { id: '5', name: 'Торт', image: '/images/cake.png', price: '50' },
-    { id: '6', name: 'Букет', image: '/images/bouquet.png', price: '50' },
-    { id: '7', name: 'Кубок', image: '/images/cup.png', price: '100' },
-    { id: '8', name: 'Алмаз', image: '/images/diamond.png', price: '100' }
+    { id: '1', name: 'Сердце', image: '/images/heart-Photoroom.png', price: '15' },
+    { id: '2', name: 'Мишка', image: '/images/bear-Photoroom.png', price: '15' },
+    { id: '3', name: 'Подарок', image: '/images/present-Photoroom.png', price: '25' },
+    { id: '4', name: 'Цветок', image: '/images/flower-Photoroom.png', price: '25' },
+    { id: '5', name: 'Торт', image: '/images/cake-Photoroom.png', price: '50' },
+    { id: '6', name: 'Букет', image: '/images/bouquet-Photoroom.png', price: '50' },
+    { id: '7', name: 'Кубок', image: '/images/cup-Photoroom.png', price: '100' },
+    { id: '8', name: 'Алмаз', image: '/images/diamond-Photoroom.png', price: '100' }
   ];
   const closeModal = () => {
     setShowModal(false);
@@ -289,7 +289,7 @@ function App() {
           {giftsList.map((gift, index) => (
             <div key={index} className="gift-item">
               
-              <Lottie animationData={stickerData} initialSegment={[0, 1]} loop={false} autoplay={false}/>
+              <img src={gift.image} alt={gift.name}/>
             
                 
               <div>{gift.name}</div>
