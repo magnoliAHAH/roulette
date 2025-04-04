@@ -20,6 +20,7 @@ type Gift struct {
 	Image  string  `json:"image"`
 	Chance float64 `json:"chance"`
 	Price  int32   `json:"price"`
+	FileId string  `json:"fileId"`
 }
 
 type BalanceAdjustment struct {
@@ -37,14 +38,14 @@ var (
 )
 
 var gifts = []Gift{
-	{"5170145012310081615", "Сердце", "/images/heart.png", 0.24, 15},
-	{"5170233102089322756", "Мишка", "/images/bear.png", 0.24, 15},
-	{"5170250947678437525", "Подарок", "/images/present.png", 0.14, 25},
-	{"5168103777563050263", "Цветок", "/images/flower.png", 0.14, 25},
-	{"5170144170496491616", "Торт", "/images/cake.png", 0.07, 50},
-	{"5170314324215857265", "Букет", "/images/bouquet.png", 0.07, 50},
-	{"5168043875654172773", "Кубок", "/images/cup.png", 0.035, 100},
-	{"5170521118301225164", "Алмаз", "/images/diamond.png", 0.035, 100},
+	{"5170145012310081615", "Сердце", "stickers/file_0.tgs", 0.24, 15, "CAACAgIAAxUAAWftiPMLxu8EQ_qjkagqWLE-MaYRAAJ8GwACkoTYS_itxFzPIpm1NgQ"},
+	{"5170233102089322756", "Мишка", "stickers/file_1.tgs", 0.24, 15, "CAACAgIAAxUAAWfuP2WNsmgwExdYGcr5cI1Ahyz7AAKtVAACmj_pSnvPkDQv_sivNgQ"},
+	{"5170250947678437525", "Подарок", "stickers/file_2.tgs", 0.14, 25, "CAACAgIAAxUAAWfuRg15KexG01ACPLcWEX5ODZLcAAKNSAACsU84SMuB4ge7V_wGNgQ"},
+	{"5168103777563050263", "Цветок", "stickers/file_3.tgs", 0.14, 25, "CAACAgIAAxUAAWfudcO964qSuz51KReUK7z5EMI8AAJxGQAC1P-BS9CYmaAv74KENgQ"},
+	{"5170144170496491616", "Торт", "stickers/file_4.tgs", 0.07, 50, "CAACAgIAAxUAAWfuVQfRaYk5xGetaiVgU7jfqVZxAAKBGAAClZ-JSmrGT5kBZFDGNgQ"},
+	{"5170314324215857265", "Букет", "stickers/file_5.tgs", 0.07, 50, "CAACAgIAAxUAAWfudD3UkW3jRGrhCO09_nDonZRyAALeJQACRSDgSsjmE6AUz0NeNgQ"},
+	{"5168043875654172773", "Кубок", "stickers/file_6.tgs", 0.035, 100, "CAACAgIAAxUAAWfudcOLzWLnanjwucTziB55VplxAAKZGwACzagQS38R6izkF899NgQ"},
+	{"5170521118301225164", "Алмаз", "stickers/file_7.tgs", 0.035, 100, "CAACAgIAAxUAAWfudcPM1jN3IVNejHx2YBZcgq5OAAIbHgACQEjwS6XKX-OK2k1MNgQ"},
 }
 
 // Инициализация БД

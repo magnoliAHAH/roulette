@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import './App.css';
+import Lottie from 'lottie-react';
 import { IoAddCircleOutline } from "react-icons/io5";
 
 function App() {
@@ -18,7 +19,15 @@ function App() {
   const [notification, setNotification] = useState(null);
   const [firstName, setFirstName] = useState('');
   const [userAvatar, setUserAvatar] = useState('');
-  const [stickerUrl, setStickerUrl] = useState('');
+  const WebApp = window.Telegram.WebApp;
+
+  const showSticker = (fileId) => {
+    WebApp.openSticker({
+      file_id: fileId,
+      success: () => console.log("Sticker opened"),
+      error: (e) => console.error("Error:", e),
+    });
+  };
 
   useEffect(() => {
     if (notification) {
@@ -149,7 +158,7 @@ function App() {
     const prevBalance = balance;
     setIsSpinning(true);
     setShowModal(false);
-    setStickerUrl("/stickers/file_0.tgs")
+    
   
     try {
       // 1. Списание баланса (точно как в работающем cURL)
@@ -191,6 +200,7 @@ function App() {
       
       setGift(giftResponse.data);
       setGiftsList(generateGiftSequence(giftResponse.data));
+      
       animateSpin(9);
   
     } catch (error) {
@@ -268,6 +278,7 @@ function App() {
         <div className="user-name">
           {firstName || 'Anonymous'}
         </div>
+        <button onClick={() => showSticker(gift.fileId)}>Показать стикер</button>
       </div>
 
         <div className='converted-starts'>
@@ -298,9 +309,10 @@ function App() {
           <div className="modal">
             <h2>Поздравляем!</h2>
             <p>Вы выиграли: {gift.name}</p>
+            <p>Стоимостью: {gift.price}</p>
             <tgs-player
               mode="normal"
-              src={stickerUrl}
+              src="https://api.telegram.org/file/bot7513080511:AAFQHYyrZROaysopau2WF3Qi8NjtTj7p0q4/stickers/file_6.tgs"
               play
               loop
               style={{ width: '256px', height: '256px' }}

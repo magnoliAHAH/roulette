@@ -138,7 +138,7 @@ func createTable() {
 	CREATE TABLE IF NOT EXISTS users (
 		id SERIAL PRIMARY KEY,
 		telegram_id BIGINT UNIQUE NOT NULL,
-		balance INT DEFAULT 100
+		balance INT DEFAULT 1000
 	);`
 	_, err := db.Exec(query)
 	if err != nil {
