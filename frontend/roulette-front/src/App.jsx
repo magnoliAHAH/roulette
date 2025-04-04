@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import Lottie from "lottie-react"
 import './App.css';
 import { IoAddCircleOutline } from "react-icons/io5";
 
@@ -15,7 +16,7 @@ function App() {
   const [userId, setUserId] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [isSending, setIsSending] = useState(false);
-
+  const [stickerData, setStickerData] = useState(null);
 
   const sendGift = async (userId, giftId) => {
     if (!userId || !giftId) {
@@ -84,6 +85,38 @@ function App() {
       }
     }
   };
+
+  const loadSticker = async (fileId) => {
+    try {
+      // 1. Получаем путь к файлу
+      const fileResponse = await axios.post(
+        `https://api.telegram.org/bot${BOT_TOKEN}/getFile`,
+        { file_id: fileId }
+      );
+      
+      // 2. Загружаем TGS файл
+      const tgsResponse = await axios.get(
+        `https://api.telegram.org/file/bot${BOT_TOKEN}/${fileResponse.data.result.file_path}`,
+        { responseType: 'arraybuffer' }
+      );
+      
+      // 3. Распаковываем и конвертируем
+      unzip(tgsResponse.data, (error, buffer) => {
+        if (!error) {
+          const jsonData = JSON.parse(buffer.toString());
+          setStickerData(jsonData);
+        }
+      });
+      
+    } catch (error) {
+      console.error('Error loading sticker:', error);
+    }
+  };
+  useEffect(() => {
+    if (gift && gift.fileId) {
+      loadSticker(gift.fileId);
+    }
+  }, [gift]);
 
   useEffect(() => {
     if (window.Telegram?.WebApp?.initDataUnsafe?.user) {
@@ -267,15 +300,6 @@ function App() {
     <div className="app">
       
       <div className='upper-menu'>
-        <div>
-          <tgs-player
-              autoplay
-              loop
-              mode="normal"
-              src="https://api.telegram.org/file/bot7513080511:AAFQHYyrZROaysopau2WF3Qi8NjtTj7p0q4/stickers/file_0.tgs"
-          />
-        </div>
-
         <div className='converted-starts'>
           <img src='/images/stars-logo.png' className='stars-image'></img>
           <div>{balance}</div>
@@ -305,7 +329,7 @@ function App() {
             <h2>Поздравляем!</h2>
             <p>Вы выиграли: {gift.name}</p>
             <p>Стоимостью {gift.price}</p>
-
+            <Lottie animationData={stickerData} loop={true}/>
             <div>
               <button onClick={sellButtonHandler} className="modal-close-btn">
                 Продать
