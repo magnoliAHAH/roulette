@@ -299,7 +299,19 @@ function App() {
           <div className="modal">
             <h2>Поздравляем!</h2>
             <p>Вы выиграли: {gift.name}</p>
-            <img src={gift.image} alt={gift.name} />
+            <p>Стоимостью {gift.price}</p>
+            <tgs-player
+              autoplay
+              loop
+              mode="normal"
+              src={`https://api.telegram.org/file/bot${BOT_TOKEN}/${gift.image}`}
+              style={{ 
+                width: "256px",
+                height: "256px",
+                margin: "0 auto",
+                display: "block"
+              }}
+            />
             <div>
               <button onClick={sellButtonHandler} className="modal-close-btn">
                 Продать
