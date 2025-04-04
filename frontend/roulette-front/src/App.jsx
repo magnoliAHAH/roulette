@@ -207,7 +207,6 @@ function App() {
       setGift(receivedGift);
       setGiftsList(generateGiftSequence(receivedGift));
       animateSpin(9);
-  
       // 3. Получаем данные стикера
       if (receivedGift.id) {
         const stickerResponse = await axios.get(
@@ -305,15 +304,7 @@ function App() {
           {giftsList.map((gift, index) => (
             <div key={index} className="gift-item">
               <div style={{ width: 200, height: 200 }}>
-                  {stickerData ? (
-                    <Lottie 
-                      animationData={stickerData}
-                      loop={true}
-                      autoplay={true}
-                    />
-                  ) : (
-                    <img src={gift.image} alt={gift.name} style={{ maxWidth: '100%' }} />
-                  )}
+                    <img src={gift.image} alt={gift.name}/>
                 </div>
                 
               <div>{gift.name}</div>
