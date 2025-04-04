@@ -284,6 +284,23 @@ function App() {
     <div className="app">
       
       <div className='upper-menu'>
+
+        <div className='user-info'>
+          {userAvatar && (
+            <img 
+              src={userAvatar} 
+              alt="User Avatar"
+              className="user-avatar"
+              onError={(e) => {
+                e.target.style.display = 'none'; // Скрыть если изображение не загрузится
+              }}
+            />
+          )}
+          <div className="user-name">
+            {firstName || 'Anonymous'}
+          </div>
+        </div>
+
         <div className='converted-starts'>
           <img src='/images/stars-logo.png' className='stars-image'></img>
           <div>{balance}</div>
@@ -308,7 +325,7 @@ function App() {
       </div>
 
       
-      <button onClick={startSpin} disabled={isSpinning || balance < spinCost} className='spinBtn'>{balance < spinCost ? "Недостаточный баланс" : "Крутить рулетку"}</button>
+      <button onClick={startSpin} disabled={isSpinning || balance < spinCost} className='spinBtn'>{balance < spinCost ? "Недостаточный баланс" : `Крутить рулетку \n ${setSpinCost}`}</button>
 
       {showModal && gift && (
         <div className="modal-overlay">
