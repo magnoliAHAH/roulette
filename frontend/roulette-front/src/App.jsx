@@ -168,15 +168,16 @@ function App() {
     const prevBalance = balance;
     setIsSpinning(true);
     setShowModal(false);
+    setStickerData(null); // Сбрасываем предыдущие данные стикера
   
     try {
-      // 1. Списание баланса (точно как в работающем cURL)
+      // 1. Списание баланса
       const adjustResponse = await axios.post(
         'https://supreme-roulette.work.gd/api/adjust-balance',
         {
-          user_id: String(userId), // Пока используем хардкод, как в cURL
-          delta: -spinCost, // Важно: именно -1, как в работающем запросе
-          reason: "Spin" // Точное соответствие cURL
+          user_id: String(userId),
+          delta: -spinCost,
+          reason: "Spin"
         },
         {
           headers: { 
@@ -187,18 +188,13 @@ function App() {
         }
       );
   
-      // 2. Валидация ответа
       if (!adjustResponse.data?.success) {
         throw new Error('Balance adjustment failed: ' + JSON.stringify(adjustResponse.data));
       }
   
-      // 3. Логирование для отладки
-      console.log('Balance adjusted:', adjustResponse.data);
+      setBalance(prevBalance - spinCost);
   
-      // 4. Обновляем баланс на фронтенде
-      setBalance(prevBalance - spinCost); // Списываем 1 единицу, как в API
-  
-      // 5. Получаем подарок
+      // 2. Получаем подарок
       const giftResponse = await axios.get(
         'https://supreme-roulette.work.gd/api/gift',
         { 
@@ -207,26 +203,43 @@ function App() {
         }
       );
       
-      setGift(giftResponse.data);
-      setGiftsList(generateGiftSequence(giftResponse.data));
-
-      const stickerResponse = await axios.get(
-        `https://supreme-roulette.work.gd/api/lottie?file_id=${gift.id}&with_content=true`,
-        { 
-          headers: { 'X-API-Key': API_KEY },
-          timeout: 10000
+      const receivedGift = giftResponse.data;
+      setGift(receivedGift);
+      setGiftsList(generateGiftSequence(receivedGift));
+  
+      // 3. Получаем данные стикера
+      if (receivedGift.id) {
+        const stickerResponse = await axios.get(
+          `https://supreme-roulette.work.gd/api/lottie?file_id=${receivedGift.id}&with_content=true`,
+          { 
+            headers: { 'X-API-Key': API_KEY },
+            timeout: 10000
+          }
+        );
+        
+        // Проверяем и обрабатываем ответ
+        if (stickerResponse.data?.content) {
+          try {
+            const animationData = JSON.parse(stickerResponse.data.content);
+            setStickerData(animationData);
+          } catch (parseError) {
+            console.error('Error parsing sticker content:', parseError);
+            // Если не удалось распарсить, сохраняем как есть
+            setStickerData(stickerResponse.data);
+          }
+        } else {
+          // Если структура ответа отличается
+          setStickerData(stickerResponse.data);
         }
-      );
-      setStickerData(JSON.parse(stickerResponse.content))
-
+      }
+  
       animateSpin(9);
   
     } catch (error) {
       console.error('Error in startSpin:', error);
-      setBalance(prevBalance); // Откат
+      setBalance(prevBalance);
       setIsSpinning(false);
       
-      // Дополнительная диагностика
       if (error.response) {
         console.error('Server response:', error.response.data);
       }
