@@ -1,9 +1,12 @@
 package main
 
 import (
+	"bytes"
+	"compress/zlib"
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"math/rand"
 	"net/http"
@@ -35,6 +38,11 @@ type TelegramFileResponse struct {
 	Result struct {
 		FilePath string `json:"file_path"`
 	} `json:"result"`
+}
+
+type LottieResponse struct {
+	FilePath string `json:"file_path"`
+	Content  string `json:"content,omitempty"`
 }
 
 // Глобальные переменные
@@ -284,6 +292,100 @@ func filePathHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{
 		"file_path": fileResp.Result.FilePath,
 	})
+}
+
+func lottieHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "GET")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, X-API-Key")
+
+	if r.Method == http.MethodOptions {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	fileID := r.URL.Query().Get("file_id")
+	if fileID == "" {
+		http.Error(w, "file_id is required", http.StatusBadRequest)
+		return
+	}
+
+	// 1. Получаем путь к файлу
+	filePath, err := getTelegramFilePath(fileID)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error getting file path: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	// 2. Получаем содержимое файла (опционально)
+	content := ""
+	if r.URL.Query().Get("with_content") == "true" {
+		fileContent, err := getLottieFileContent(filePath)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Error getting file content: %v", err), http.StatusInternalServerError)
+			return
+		}
+		content = string(fileContent)
+	}
+
+	json.NewEncoder(w).Encode(LottieResponse{
+		FilePath: filePath,
+		Content:  content,
+	})
+}
+
+func getTelegramFilePath(fileID string) (string, error) {
+	botToken := os.Getenv("TELEGRAM_BOT_TOKEN")
+	url := fmt.Sprintf("https://api.telegram.org/bot%s/getFile?file_id=%s", botToken, fileID)
+
+	resp, err := http.Get(url)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	var result struct {
+		OK     bool `json:"ok"`
+		Result struct {
+			FilePath string `json:"file_path"`
+		} `json:"result"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return "", err
+	}
+
+	if !result.OK {
+		return "", fmt.Errorf("telegram API returned not OK")
+	}
+
+	return result.Result.FilePath, nil
+}
+
+func getLottieFileContent(filePath string) ([]byte, error) {
+	botToken := os.Getenv("TELEGRAM_BOT_TOKEN")
+	url := fmt.Sprintf("https://api.telegram.org/file/bot%s/%s", botToken, filePath)
+
+	resp, err := http.Get(url)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	compressedData, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	// Распаковываем .tgs файл (Zlib compressed)
+	reader, err := zlib.NewReader(bytes.NewReader(compressedData))
+	if err != nil {
+		return nil, err
+	}
+	defer reader.Close()
+
+	return io.ReadAll(reader)
 }
 
 func main() {
