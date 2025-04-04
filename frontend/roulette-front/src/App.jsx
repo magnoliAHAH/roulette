@@ -289,7 +289,7 @@ function App() {
           {giftsList.map((gift, index) => (
             <div key={index} className="gift-item">
               
-              <img src={gift.image} alt={gift.name}/>
+              <img src={gift.localPath} alt={gift.name}/>
             
                 
               <div>{gift.name}</div>
