@@ -15,32 +15,11 @@ function App() {
   const [userId, setUserId] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [isSending, setIsSending] = useState(false);
-  const [notification, setNotification] = useState(null);
-  const [firstName, setFirstName] = useState('');
-  const [userAvatar, setUserAvatar] = useState('');
-  const WebApp = window.Telegram.WebApp;
 
-  const showSticker = (fileId) => {
-    WebApp.openSticker({
-      file_id: fileId,
-      success: () => console.log("Sticker opened"),
-      error: (e) => console.error("Error:", e),
-    });
-  };
-
-  useEffect(() => {
-    if (notification) {
-      const timer = setTimeout(() => {
-        setNotification(null);
-      }, 2500);
-      return () => clearTimeout(timer);
-    }
-  }, [notification]);
 
   const sendGift = async (userId, giftId) => {
     if (!userId || !giftId) {
-      setNotification({ type: 'error', message: 'Не указан пользователь или подарок' });
-      return;
+      throw new Error('Не указан пользователь или подарок');
     }
 
     const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendGift`;
@@ -54,31 +33,62 @@ function App() {
     try {
       const response = await axios.post(url, params);
       if (response.data.ok) {
-        setNotification({ type: 'success', message: 'Подарок успешно отправлен!' });
+        console.log('Подарок успешно отправлен:', response.data.result);
       } else {
-        setNotification({ type: 'error', message: `Ошибка: ${response.data.description}` });
+        console.error('Ошибка при отправке подарка:', response.data.description);
       }
     } catch (error) {
-      setNotification({ type: 'error', message: `Ошибка сети: ${error.message}` });
+      console.error('Ошибка при отправке подарка:', error.message);
     }
     setShowModal(false)
   };
 
-  const addBalance = () => {
-    setNotification({ type: 'error', message: `Пополни баланс через бота /buy` });
+  const addBalance = async () => {
+    const prevBalance = balance;
+    try {
+      // 1. Списание баланса (точно как в работающем cURL)
+      const adjustResponse = await axios.post(
+        'https://supreme-roulette.work.gd/api/adjust-balance',
+        {
+          user_id: String(userId),
+          delta: gift.price,
+          reason: "Add by Button"
+        },
+        {
+          headers: { 
+            'X-API-Key': API_KEY,
+            'Content-Type': 'application/json'
+          },
+          timeout: 10000
+        }
+      );
+  
+      // 2. Валидация ответа
+      if (!adjustResponse.data?.success) {
+        throw new Error('Balance adjustment failed: ' + JSON.stringify(adjustResponse.data));
+      }
+  
+      // 3. Логирование для отладки
+      console.log('Balance adjusted:', adjustResponse.data);
+  
+      // 4. Обновляем баланс на фронтенде
+      setBalance(prevBalance + spinCost); // Списываем 1 единицу, как в API
+  
+    } catch (error) {
+      console.error('Error in Selling:', error);
+      setBalance(prevBalance); // Откат
+      
+      // Дополнительная диагностика
+      if (error.response) {
+        console.error('Server response:', error.response.data);
+      }
+    }
   };
 
   useEffect(() => {
     if (window.Telegram?.WebApp?.initDataUnsafe?.user) {
-      const tgUser = window.Telegram.WebApp.initDataUnsafe.user;
-    
-    // Основные данные
-      const userId = tgUser.id;
-      const firstName = tgUser.first_name;
-      const avatarUrl = tgUser.photo_url || '';
-      setFirstName(firstName);
+      const userId = window.Telegram.WebApp.initDataUnsafe.user.id;
       setUserId(userId);
-      setUserAvatar(avatarUrl);
 
       fetch(`https://supreme-roulette.work.gd/api/balance?user_id=${userId}`, 
         {
@@ -136,8 +146,7 @@ function App() {
       console.log('Balance adjusted:', adjustResponse.data);
   
       // 4. Обновляем баланс на фронтенде
-      setBalance(prevBalance + gift.price);
-      setNotification({ type: 'success', message: 'Подарок успешно продан!' });
+      setBalance(prevBalance + gift.price); 
   
     } catch (error) {
       console.error('Error in Selling:', error);
@@ -157,7 +166,6 @@ function App() {
     const prevBalance = balance;
     setIsSpinning(true);
     setShowModal(false);
-    
   
     try {
       // 1. Списание баланса (точно как в работающем cURL)
@@ -199,7 +207,6 @@ function App() {
       
       setGift(giftResponse.data);
       setGiftsList(generateGiftSequence(giftResponse.data));
-      
       animateSpin(9);
   
     } catch (error) {
@@ -224,7 +231,6 @@ function App() {
     }
     extendedGifts[20] = winningGift;
     return extendedGifts;
-    
   };
 
   const animateSpin = (winningIndex) => {
@@ -257,28 +263,13 @@ function App() {
     return shuffledArray;
   };
 
-
-
   return (
     <div className="app">
       
       <div className='upper-menu'>
-      <div className='user-info'>
-        {userAvatar && (
-          <img 
-            src={userAvatar} 
-            alt="User Avatar"
-            className="user-avatar"
-            onError={(e) => {
-              e.target.style.display = 'none'; // Скрыть если изображение не загрузится
-            }}
-          />
-        )}
-        <div className="user-name">
-          {firstName || 'Anonymous'}
+        <div>
+          <h1>{userId}</h1>
         </div>
-        <button onClick={() => showSticker(gift.fileId)}>Показать стикер</button>
-      </div>
 
         <div className='converted-starts'>
           <img src='/images/stars-logo.png' className='stars-image'></img>
@@ -308,14 +299,7 @@ function App() {
           <div className="modal">
             <h2>Поздравляем!</h2>
             <p>Вы выиграли: {gift.name}</p>
-            <p>Стоимостью: {gift.price}</p>
-            <tgs-player
-              mode="normal"
-              src="https://api.telegram.org/file/bot7513080511:AAFQHYyrZROaysopau2WF3Qi8NjtTj7p0q4/stickers/file_6.tgs"
-              play
-              loop
-              style={{ width: '256px', height: '256px' }}
-            ></tgs-player>
+            <img src={gift.image} alt={gift.name} />
             <div>
               <button onClick={sellButtonHandler} className="modal-close-btn">
                 Продать
@@ -341,14 +325,6 @@ function App() {
       </button>
             </div>
           </div>
-        </div>
-      )}
-      {notification && (
-        <div className={`notification ${notification.type}`}>
-          {notification.message}
-          <button onClick={() => setNotification(null)} className="notification-close">
-            ×
-          </button>
         </div>
       )}
     </div>
