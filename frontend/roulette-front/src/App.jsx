@@ -325,7 +325,7 @@ function App() {
       </div>
 
       
-      <button onClick={startSpin} disabled={isSpinning || balance < spinCost} className='spinBtn'>{balance < spinCost ? "Недостаточный баланс" : `Крутить рулетку \n ${setSpinCost}`}</button>
+      <button onClick={startSpin} disabled={isSpinning || balance < spinCost} className='spinBtn'>{balance < spinCost ? "Недостаточный баланс" : "Крутить рулетку"}</button>
 
       {showModal && gift && (
         <div className="modal-overlay">
