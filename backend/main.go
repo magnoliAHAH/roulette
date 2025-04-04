@@ -2,7 +2,7 @@ package main
 
 import (
 	"bytes"
-	"compress/zlib"
+	"compress/gzip"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -379,7 +379,7 @@ func getLottieFileContent(filePath string) ([]byte, error) {
 	}
 
 	// Распаковываем .tgs файл (Zlib compressed)
-	reader, err := zlib.NewReader(bytes.NewReader(compressedData))
+	reader, err := gzip.NewReader(bytes.NewReader(compressedData))
 	if err != nil {
 		return nil, err
 	}
