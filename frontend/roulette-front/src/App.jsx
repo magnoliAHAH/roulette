@@ -289,7 +289,7 @@ function App() {
           {giftsList.map((gift, index) => (
             <div key={index} className="gift-item">
               
-              <img src={gift.image} alt={gift.name}/>
+              <Lottie animationData={stickerData} initialSegment={[0, 1]} loop={false} autoplay={false}/>
             
                 
               <div>{gift.name}</div>
