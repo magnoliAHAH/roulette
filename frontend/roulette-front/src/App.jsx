@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import './App.css';
-import Lottie from 'lottie-react';
 import { IoAddCircleOutline } from "react-icons/io5";
 
 function App() {
