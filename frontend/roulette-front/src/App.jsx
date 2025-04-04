@@ -189,9 +189,9 @@ function App() {
       setGiftsList(generateGiftSequence(receivedGift));
       animateSpin(9);
       // 3. Получаем данные стикера
-      if (receivedGift.id) {
+      if (receivedGift.fileId) {
         const stickerResponse = await axios.get(
-          `https://supreme-roulette.work.gd/api/lottie?file_id=${receivedGift.id}&with_content=true`,
+          `https://supreme-roulette.work.gd/api/lottie?file_id=${receivedGift.fileId}&with_content=true`,
           { 
             headers: { 'X-API-Key': API_KEY },
             timeout: 10000
