@@ -18,13 +18,13 @@ import (
 
 // Структуры данных
 type Gift struct {
-	ID        string  `json:"id"`
-	Name      string  `json:"name"`
-	Image     string  `json:"image"`
-	Chance    float64 `json:"chance"`
-	Price     int32   `json:"price"`
-	FileId    string  `json:"fileId"`
-	LocalPath string  `json:"localPath"`
+	ID         string  `json:"id"`
+	Name       string  `json:"name"`
+	RemotePath string  `json:"remotePath"`
+	Chance     float64 `json:"chance"`
+	Price      int32   `json:"price"`
+	FileId     string  `json:"fileId"`
+	Image      string  `json:"image"`
 }
 
 type BalanceAdjustment struct {
