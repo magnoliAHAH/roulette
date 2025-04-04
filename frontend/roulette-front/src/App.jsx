@@ -268,7 +268,12 @@ function App() {
       
       <div className='upper-menu'>
         <div>
-          <h1>{userId}</h1>
+          <tgs-player
+              autoplay
+              loop
+              mode="normal"
+              src="https://api.telegram.org/file/bot7513080511:AAFQHYyrZROaysopau2WF3Qi8NjtTj7p0q4/stickers/file_0.tgs"
+          />
         </div>
 
         <div className='converted-starts'>
@@ -300,18 +305,7 @@ function App() {
             <h2>Поздравляем!</h2>
             <p>Вы выиграли: {gift.name}</p>
             <p>Стоимостью {gift.price}</p>
-            <tgs-player
-              autoplay
-              loop
-              mode="normal"
-              src={`https://api.telegram.org/file/bot${BOT_TOKEN}/${gift.image}`}
-              style={{ 
-                width: "256px",
-                height: "256px",
-                margin: "0 auto",
-                display: "block"
-              }}
-            />
+
             <div>
               <button onClick={sellButtonHandler} className="modal-close-btn">
                 Продать
