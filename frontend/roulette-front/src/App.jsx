@@ -87,37 +87,6 @@ function App() {
     }
   };
 
-  const loadSticker = async (fileId) => {
-    try {
-      // 1. Получаем путь к файлу
-      const fileResponse = await axios.post(
-        `https://api.telegram.org/bot${BOT_TOKEN}/getFile`,
-        { file_id: fileId }
-      );
-      
-      // 2. Загружаем TGS файл
-      const tgsResponse = await axios.get(
-        `https://api.telegram.org/file/bot${BOT_TOKEN}/${fileResponse.data.result.file_path}`,
-        { responseType: 'arraybuffer' }
-      );
-      
-      // 3. Распаковываем и конвертируем
-      unzip(tgsResponse.data, (error, buffer) => {
-        if (!error) {
-          const jsonData = JSON.parse(buffer.toString());
-          setStickerData(jsonData);
-        }
-      });
-      
-    } catch (error) {
-      console.error('Error loading sticker:', error);
-    }
-  };
-  useEffect(() => {
-    if (gift && gift.fileId) {
-      loadSticker(gift.fileId);
-    }
-  }, [gift]);
 
   useEffect(() => {
     if (window.Telegram?.WebApp?.initDataUnsafe?.user) {

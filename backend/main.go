@@ -29,6 +29,14 @@ type BalanceAdjustment struct {
 	Reason string  `json:"reason,omitempty"`
 }
 
+// Структура для ответа Telegram API
+type TelegramFileResponse struct {
+	OK     bool `json:"ok"`
+	Result struct {
+		FilePath string `json:"file_path"`
+	} `json:"result"`
+}
+
 // Глобальные переменные
 var (
 	db      *sql.DB
@@ -225,6 +233,59 @@ func giftHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(getRandomGift())
 }
 
+// Обработчик для получения file_path
+func filePathHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "GET")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, X-API-Key")
+
+	if r.Method == http.MethodOptions {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	fileID := r.URL.Query().Get("file_id")
+	if fileID == "" {
+		http.Error(w, "file_id is required", http.StatusBadRequest)
+		return
+	}
+
+	// Формируем URL запроса к Telegram API
+	botToken := os.Getenv("TELEGRAM_BOT_TOKEN")
+	if botToken == "" {
+		http.Error(w, "TELEGRAM_BOT_TOKEN not configured", http.StatusInternalServerError)
+		return
+	}
+
+	url := fmt.Sprintf("https://api.telegram.org/bot%s/getFile?file_id=%s", botToken, fileID)
+
+	// Выполняем запрос
+	resp, err := http.Get(url)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error requesting Telegram API: %v", err), http.StatusInternalServerError)
+		return
+	}
+	defer resp.Body.Close()
+
+	// Декодируем ответ
+	var fileResp TelegramFileResponse
+	if err := json.NewDecoder(resp.Body).Decode(&fileResp); err != nil {
+		http.Error(w, fmt.Sprintf("Error decoding response: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	if !fileResp.OK {
+		http.Error(w, "Telegram API returned not OK", http.StatusInternalServerError)
+		return
+	}
+
+	// Возвращаем только file_path
+	json.NewEncoder(w).Encode(map[string]string{
+		"file_path": fileResp.Result.FilePath,
+	})
+}
+
 func main() {
 	// Проверка обязательных переменных окружения
 	requiredEnv := []string{"API_SECRET", "DATABASE_URL"}
@@ -241,6 +302,7 @@ func main() {
 	http.HandleFunc("/api/gift", apiKeyMiddleware(giftHandler))
 	http.HandleFunc("/api/balance", apiKeyMiddleware(balanceHandler))
 	http.HandleFunc("/api/adjust-balance", apiKeyMiddleware(adjustBalanceHandler))
+	http.HandleFunc("/api/filepath", apiKeyMiddleware(filePathHandler))
 
 	// Запуск сервера
 	port := os.Getenv("PORT")
@@ -253,6 +315,7 @@ func main() {
 	log.Println("GET  /api/gift - Получить случайный подарок")
 	log.Println("GET  /api/balance?user_id=ID - Получить баланс")
 	log.Println("POST /api/adjust-balance - Изменить баланс (delta)")
+	log.Println("GET  /api/filepath?file_id=ID - Получить file_path из Telegram API")
 
 	log.Fatal(http.ListenAndServe(":"+port, nil))
 }
