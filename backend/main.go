@@ -87,7 +87,7 @@ func initDB() {
 			total_spins INT DEFAULT 0,
 			total_spent NUMERIC DEFAULT 0,
 			total_earned NUMERIC DEFAULT 0,
-			balance NUMERIC DEFAULT 0
+			balance NUMERIC DEFAULT 1000
 		);
 
 		CREATE TABLE IF NOT EXISTS gifts (
@@ -436,6 +436,146 @@ func getLottieFileContent(filePath string) ([]byte, error) {
 	return io.ReadAll(reader)
 }
 
+/* Новые */
+func handleSpin(telegramID string, spinCost int) error {
+	result, err := db.Exec(`
+        UPDATE users 
+        SET 
+            balance = balance - $1,
+            total_spent = total_spent + $1,
+            total_spins = total_spins + 1,
+            last_active = NOW()
+        WHERE telegram_id = $2 AND balance >= $1`,
+		spinCost, telegramID)
+	if err != nil {
+		return err
+	}
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rowsAffected == 0 {
+		return fmt.Errorf("insufficient balance")
+	}
+	return nil
+}
+
+func getUserStats(telegramID string) (map[string]interface{}, error) {
+	var stats struct {
+		Balance     float64   `json:"balance"`
+		TotalSpins  int       `json:"total_spins"`
+		TotalSpent  float64   `json:"total_spent"`
+		TotalEarned float64   `json:"total_earned"`
+		LastActive  time.Time `json:"last_active"`
+	}
+
+	err := db.QueryRow(`
+        SELECT 
+            balance, 
+            total_spins, 
+            total_spent, 
+            total_earned, 
+            last_active 
+        FROM users 
+        WHERE telegram_id = $1`,
+		telegramID).Scan(
+		&stats.Balance,
+		&stats.TotalSpins,
+		&stats.TotalSpent,
+		&stats.TotalEarned,
+		&stats.LastActive,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return map[string]interface{}{
+		"balance":      stats.Balance,
+		"total_spins":  stats.TotalSpins,
+		"total_spent":  stats.TotalSpent,
+		"total_earned": stats.TotalEarned,
+		"last_active":  stats.LastActive.Format(time.RFC3339),
+	}, nil
+}
+
+func spinHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "POST")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, X-API-Key")
+
+	if r.Method == http.MethodOptions {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	var request struct {
+		TelegramID string `json:"telegram_id"`
+		SpinCost   int    `json:"spin_cost"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	if request.TelegramID == "" || request.SpinCost <= 0 {
+		http.Error(w, "Invalid parameters", http.StatusBadRequest)
+		return
+	}
+
+	err := handleSpin(request.TelegramID, request.SpinCost)
+	if err != nil {
+		if err.Error() == "insufficient balance" {
+			http.Error(w, "Insufficient balance", http.StatusBadRequest)
+		} else {
+			log.Printf("Spin error: %v", err)
+			http.Error(w, "Database error", http.StatusInternalServerError)
+		}
+		return
+	}
+
+	stats, err := getUserStats(request.TelegramID)
+	if err != nil {
+		http.Error(w, "Failed to get user stats", http.StatusInternalServerError)
+		return
+	}
+
+	json.NewEncoder(w).Encode(stats)
+}
+
+func statsHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Methods", "GET")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, X-API-Key")
+
+	if r.Method == http.MethodOptions {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	userID := r.URL.Query().Get("user_id")
+	if userID == "" {
+		http.Error(w, "user_id is required", http.StatusBadRequest)
+		return
+	}
+
+	stats, err := getUserStats(userID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			http.Error(w, "User not found", http.StatusNotFound)
+		} else {
+			log.Printf("Stats error: %v", err)
+			http.Error(w, "Database error", http.StatusInternalServerError)
+		}
+		return
+	}
+
+	json.NewEncoder(w).Encode(stats)
+}
+
 func main() {
 	// Проверка обязательных переменных окружения
 	requiredEnv := []string{"API_SECRET", "DATABASE_URL"}
@@ -453,6 +593,9 @@ func main() {
 	http.HandleFunc("/api/balance", apiKeyMiddleware(balanceHandler))
 	http.HandleFunc("/api/adjust-balance", apiKeyMiddleware(adjustBalanceHandler))
 	http.HandleFunc("/api/lottie", apiKeyMiddleware(lottieHandler))
+	// Новый
+	http.HandleFunc("/api/spin", apiKeyMiddleware(spinHandler))
+	http.HandleFunc("/api/stats", apiKeyMiddleware(statsHandler))
 
 	// Запуск сервера
 	port := os.Getenv("PORT")
@@ -467,6 +610,9 @@ func main() {
 	log.Println("POST /api/adjust-balance - Изменить баланс (delta)")
 	log.Println("GET  /api/lottie?file_id=ID - Получить Lottie-файл")
 	log.Println("GET  /api/lottie?file_id=ID&with_content=true - Получить Lottie-файл с содержимым")
+
+	log.Println("GET  /api/spin telegram_id 123456789, spin_cost 10")
+	log.Println("GET  /api/stats ?user_id=123456789")
 
 	log.Fatal(http.ListenAndServe(":"+port, nil))
 }

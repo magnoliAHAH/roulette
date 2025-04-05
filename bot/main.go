@@ -193,7 +193,11 @@ func sendStarsSelection(bot *tgbotapi.BotAPI, chatID int64) {
 
 // 🔹 Добавление пользователя
 func addUser(telegramID int64) {
-	_, err := db.Exec("INSERT INTO users (telegram_id) VALUES ($1) ON CONFLICT DO NOTHING", telegramID)
+	_, err := db.Exec(`        INSERT INTO users (telegram_id, registered_at, last_active) 
+        VALUES ($1, NOW(), NOW())
+        ON CONFLICT (telegram_id) 
+        DO UPDATE SET last_active = NOW()`,
+		telegramID)
 	if err != nil {
 		log.Println("Ошибка при добавлении пользователя:", err)
 	}
@@ -212,7 +216,14 @@ func getBalance(telegramID int64) int {
 
 // 🔹 Пополнение баланса
 func addBalance(telegramID int64, amount int) {
-	_, err := db.Exec("UPDATE users SET balance = balance + $1 WHERE telegram_id = $2", amount, telegramID)
+	_, err := db.Exec(`
+		UPDATE users 
+        SET 
+            balance = balance + $1,
+            total_earned = total_earned + $1,
+            last_active = NOW()
+        WHERE telegram_id = $2`,
+		amount, telegramID)
 	if err != nil {
 		log.Println("Ошибка при обновлении баланса:", err)
 	}
