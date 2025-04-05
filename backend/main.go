@@ -31,6 +31,8 @@ type BalanceAdjustment struct {
 	UserID string  `json:"user_id"`
 	Delta  float64 `json:"delta"`
 	Reason string  `json:"reason,omitempty"`
+	// Добавить при необходимости
+	// OperationType string  `json:"operation_type,omitempty"`
 }
 
 // Структура для ответа Telegram API
