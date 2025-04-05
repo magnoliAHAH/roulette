@@ -80,14 +80,61 @@ func initDB() {
 
 	// Создаем таблицу истории баланса, если ее нет
 	_, err = db.Exec(`
+		CREATE TABLE IF NOT EXISTS users (
+			telegram_id TEXT PRIMARY KEY,
+			registered_at TIMESTAMP DEFAULT NOW(),
+			last_active TIMESTAMP,
+			total_spins INT DEFAULT 0,
+			total_spent NUMERIC DEFAULT 0,
+			total_earned NUMERIC DEFAULT 0,
+			balance NUMERIC DEFAULT 0
+		);
+
+		CREATE TABLE IF NOT EXISTS gifts (
+			id TEXT PRIMARY KEY,
+			name TEXT NOT NULL,
+			category VARCHAR(20),
+			base_price NUMERIC NOT NULL,
+			rarity VARCHAR(10)
+		);
+
 		CREATE TABLE IF NOT EXISTS balance_history (
 			id SERIAL PRIMARY KEY,
-			user_id TEXT NOT NULL,
+			user_id TEXT NOT NULL REFERENCES users(telegram_id),
 			delta NUMERIC NOT NULL,
 			new_balance NUMERIC NOT NULL,
 			reason TEXT,
+			gift_id TEXT REFERENCES gifts(id),
+			operation_type VARCHAR(20),
+			session_id UUID,
 			created_at TIMESTAMP DEFAULT NOW()
-		)`)
+		);
+
+		CREATE TABLE IF NOT EXISTS user_sessions (
+			session_id UUID PRIMARY KEY,
+			user_id TEXT REFERENCES users(telegram_id),
+			start_time TIMESTAMP DEFAULT NOW(),
+			end_time TIMESTAMP,
+			spins_count INT DEFAULT 0
+		);
+
+		-- Миграция данных
+		DO $$
+		BEGIN
+			IF EXISTS (SELECT 1 FROM information_schema.tables 
+                     WHERE table_name = 'old_users') THEN
+				INSERT INTO users (telegram_id, balance)
+				SELECT telegram_id::TEXT, balance 
+				FROM old_users
+				ON CONFLICT DO NOTHING;
+				DROP TABLE old_users;
+			END IF;
+			
+			ALTER TABLE users
+			ADD COLUMN IF NOT EXISTS language VARCHAR(10),
+			ADD COLUMN IF NOT EXISTS device_type VARCHAR(20);
+		END $$;
+		`)
 	if err != nil {
 		log.Fatal("Ошибка создания таблицы истории:", err)
 	}

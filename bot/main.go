@@ -135,11 +135,10 @@ func initDB() {
 // 🔹 Создание таблицы
 func createTable() {
 	query := `
-	CREATE TABLE IF NOT EXISTS users (
-		id SERIAL PRIMARY KEY,
-		telegram_id BIGINT UNIQUE NOT NULL,
-		balance INT DEFAULT 1000
-	);`
+		CREATE TABLE IF NOT EXISTS users (
+			telegram_id TEXT PRIMARY KEY,
+			balance NUMERIC DEFAULT 1000
+		);`
 	_, err := db.Exec(query)
 	if err != nil {
 		log.Fatal("Ошибка создания таблицы:", err)
