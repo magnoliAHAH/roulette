@@ -7,6 +7,8 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password
       POSTGRES_DB: telegram_bot
+      TZ: Europe/Moscow       # Общая временная зона контейнера
+      PGTZ: Europe/Moscow 
     networks:
       - app-network
     expose:
